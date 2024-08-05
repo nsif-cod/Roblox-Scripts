@@ -1,6 +1,6 @@
 --[[
-	XANE'S MODEL RECREATOR (SCRIPT/DECONSTRUCTOR PHASE) V3, WRITTEN IN 2024
-	LAST UPDATED ON AUGUST 3RD, 2024
+	XANE'S MODEL RECREATOR (SCRIPT/DECONSTRUCTOR PHASE) V4, WRITTEN IN 2024
+	LAST UPDATED ON AUGUST 4TH, 2024
 	
 	A personal script of mine, released to the public to enable anyone to save models (and other supported instances)
 	from any Roblox experience (as long as your Roblox app doesn't crash in the process of loading it)! Execute this
@@ -18,18 +18,6 @@
 	select anything that you want, give a name to this export using the text box at the bottom-right corner, then
 	with one click/tap of the save button, your selection will be transformed into JSON files in your executor's
 	"workspace" folder.
-	
-	GLOBAL ARRAY (_G) SETTINGS
-	For those in the know, you can change a couple settings that aren't accessible from the GUI by setting certain
-	values in the _G dictionary! Here's the complete list of changes you can make:
-	
-	_G.PageLength (number) - Adjusts the length of each set of Instances which are shown in the GUI. By default,
-	this is 24, but changing this will make each page longer or shorter. If it's small enough, the whole page fits!
-	
-	_G.AntiLagInterval (number) - To ensure the progress UI updates instead of the script freezing the client while
-	it's indexing or saving instances, the recursive iteration function intentionally waits a frame after it checks
-	every 25th Instance. If you have a weaker device, increase this to improve performance, though it'll come at
-	the cost of longer indexing/saving times. If on a stronger device, I recommend decreasing this or using 0.
 ]]--
 
 if not game:IsLoaded() then game.Loaded:Wait() end
@@ -50,23 +38,38 @@ local CoreGui			= game:GetService("CoreGui")
 -- STATIC DATA
 local DefaultMessage	= "Welcome to Xane's Model Recreator v3, the ultimate instance capturer! Please choose a container above, select which instances you want, name it, then save!"
 
+--- This script uses Xane's Recreator API! The boilerplate code below will load it from one of its locations online, trying each in order.
+local RecreatorAPIMirrors = {
+	'https://pastebin.com/raw/DL77J2LY',
+	'https://raw.githubusercontent.com/Xane123/Roblox-Scripts/main/API_Recreation.luau'
+}
 -- Prepare our environment; If this executor supports it, use its getgenv() function, falling back on the detectable _G if it isn't available.
 local env				= getgenv and getgenv() or _G
 
 if env then
 	if not env.XRecreator then
-		-- Attempt to load Xane's Recreator API from GitHub,
-		local success, errormsg = pcall(function() loadstring(game:HttpGet('https://raw.githubusercontent.com/Xane123/InfiniteFun_IY/master/API_Recreation.lua'))() end)
-		if not success then
-			warn("The recreator API didn't finish initializing, or the code couldn't be accessed. If Pastebin isn't available in your region, please use the last legacy build.")
-			script:Destroy()
-			return false
+		for i,mirror in RecreatorAPIMirrors do
+			-- Attempt to load Xane's Recreator API from Pastebin,
+			local success, errormsg = pcall(function() loadstring(game:HttpGet(mirror))() end)
+			if success then
+				print("Loaded Recreator API from source", i, "of", #RecreatorAPIMirrors)
+				break
+			else
+				warn("Recreator API couldn't load from " .. mirror .. ". It's either removed, or isn't available in your region.")
+			end
 		end
-		task.wait(3)
+		
 		if env.XRecreator and env.XRecreator.Save then
 			print("Recreator API has been imported and setup successfully!")
+		else
+			game:GetService("Debris"):AddItem(script, 5)
+			local VisibleError = Instance.new("Hint", game:GetService("CoreGui"))
+			VisibleError.Text = "Error: Xane's Recreator API couldn't load/initialize! Please load a local copy of that script " ..
+				"then execute this one again, or try again."
+			game:GetService("Debris"):AddItem(VisibleError,7)
+			error("The Recreator API couldn't load or initialize. This script depends on it, so execution cannot continue.")
 		end
-	else print("ℹThe recreator API is already set up! Its functions will be used by this script.")
+	else print("The recreator API is already set up! Its functions will be used by this script.")
 	end
 else
 	game:GetService("Debris"):AddItem(script, 1)
@@ -112,7 +115,7 @@ type ModelRecreatorStruct	= {
 	SetStatusGui: (_gui:TextLabel) -> (nil),							-- Changes GUI that save status is shown in. Set to nil to use default.
 	OnSaveDone	: (_success : boolean) -> (),							-- External code ran upon finishing. Used for other scripts' cleanup.
 	IsInstanceAllowed : (_instance : Instance) -> (boolean),			-- Checks if an Instance's type is safe to save. (Model Recreator v3)
-	
+
 	-- VARIABLES
 	Reserved	: boolean,												-- Set to TRUE after a script calls ActivateAPI().
 	IgnoreAttrib: string,												-- Instances with this attribute won't be scanned.
@@ -124,14 +127,10 @@ type ModelRecreatorStruct	= {
 	ClassData	: {ClassDefinition}										-- This script's "Roblox class API" (read-onlu).
 }
 local Recreator : ModelRecreatorStruct = env.XRecreator	-- Let's simplify references to the API by just defining a new "shortcut" variable.
-if not Recreator or not Recreator.ActivateAPI then
-	warn("For some reason, Recreator.ActivateAPI() doesn't exist, but it should be there.")
-else
-	if not Recreator.ActivateAPI(true) then	-- Attempt to claim the API; If it's in use, the script will stop here.
-		warn("Another script is using Xane's recreator API! Please close that script or rejoin (if it doesn't have a 'close' button).")
-		script:Destroy()
-		return false
-	end
+if not Recreator.ActivateAPI(true) then	-- Attempt to claim the API; If it's in use, the script will stop here.
+	warn("Another script is using Xane's recreator API! Please close that script or rejoin (if it doesn't have a 'close' button).")
+	script:Destroy()		
+	return false
 end
 
 Recreator.IgnoreAttrib = { "XaneProtectedDoNotShowInRecreatorGui" }	-- This script's GUI and SelectionBox instances can't be saved.

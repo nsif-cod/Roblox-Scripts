@@ -1,6 +1,6 @@
 --[[
 	XANE'S RECREATOR API, WRITTEN IN 2024
-	LAST UPDATED ON AUGUST 3RD, 2024
+	LAST UPDATED ON AUGUST 4TH, 2024
 	
 	A script that adds common functions to any Roblox script intended for saving
 	most instances to JSON files, which can be used with Xane's Asset Importer, a
@@ -17,7 +17,8 @@
 	getgenv().XRecreator.Select("set", {[instances]}) to select things and
 	getgenv().XRecreator.Save("[filename without JSON extension") to save those
 	instances and their descendants to JSON files. If you're a good scripter,
-	you'll quickly learn how to use this "API" to your advantage!
+	you'll quickly learn how to use this "API" to your advantage! Remember to
+	always use getgenv().XRecreator.Activate(false) when you're done using it!
 ]]--
 
 -- Comments with four hyphens before them relate to Xane's Model Recreator's "message" instance; Since this script was split from it,
@@ -2299,8 +2300,8 @@ function env.XRecreator.Save(_filename:string?) : boolean
 			
 			PieceEntry.BaseInstName					= _inst.Name
 			PieceEntry.InsertLocation				=
-				if inPlayers then "players"
-				elseif inPlayerGui then "playergui"
+				if inPlayerGui then "playergui"
+				elseif inPlayers then "players"
 				elseif inLighting then "lighting"
 				elseif inRepStore then "repstore"
 				elseif inSoundService then "sndservice"
