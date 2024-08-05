@@ -191,8 +191,9 @@ local Conn_CharRemove : RBXScriptConnection	= nil	-- This player's CharacterRemo
 
 local Permissions							= {
 	CanSave = false,								-- If TRUE, allows cloning the player's current targetted clothing when clicking 💾Save.
-	CanCheck = false,								-- When set, the user can look for their targeted accessory.
-	CanClose = true									-- Disables the close button if this is false. Doesn't prevent emergency shutdowns.
+	CanCheck = true,								-- When set, the user can look for their targeted accessory.
+	CanClose = true,								-- Disables the close button if this is false. Doesn't prevent emergency shutdowns.
+	CanExport = false								-- When TRUE, the player can save everything to JSON files by tapping the EXPORT button.
 }
 local Target : Model?						= nil	-- When set, this is the Model that will be cloned and named based on the preview GUI.
 local SaveName : string						= ""	-- Generated name for the current accessory's toggle and variations. (It's pretty long!)
@@ -446,15 +447,15 @@ trash.Visible = true
 trash.Name = "Question"
 trash.Parent = RHGUI_DialogBox
 
-RHGUI_UIGradient = Instance.new("UIStroke")
-RHGUI_UIGradient.Color = Color3.new(0.968628, 0.764706, 0.92549)
-RHGUI_UIGradient.Thickness = 0.8968749642372131
-RHGUI_UIGradient.Parent = trash
+local trash2 = Instance.new("UIStroke")
+trash2.Color = Color3.new(0.968628, 0.764706, 0.92549)
+trash2.Thickness = 0.8968749642372131
+trash2.Parent = trash
 
 RHGUI_UIGradient = Instance.new("UIGradient")
 RHGUI_UIGradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.new(1, 0.698039, 0.858824)), ColorSequenceKeypoint.new(0.4757789969444275, Color3.new(0.737255, 0.8, 1)), ColorSequenceKeypoint.new(1, Color3.new(0.776471, 0.87451, 1))})
 RHGUI_UIGradient.Rotation = 90
-RHGUI_UIGradient.Parent = RHGUI_UIGradient
+RHGUI_UIGradient.Parent = trash2
 
 trash = Instance.new("TextLabel")
 trash.Font = Enum.Font.DenkOne
@@ -482,7 +483,7 @@ RHGUI_UIGradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.
 RHGUI_UIGradient.Rotation = 90
 RHGUI_UIGradient.Parent = RHGUI_UIStroke
 
-local trash2 = Instance.new("UIAspectRatioConstraint")
+trash2 = Instance.new("UIAspectRatioConstraint")
 trash2.AspectRatio = 7.5869879722595215
 trash2.Parent = trash
 
@@ -1160,14 +1161,27 @@ end
 local function DenyExport()
 	RHGUI_DialogBox.Visible = false
 	message.Visible = true
+	save_button.Visible = true
+	check_button.Visible = true
+	close_button.Visible = true
+	export_button.Visible = true
 end
 Conn_RHClose1		= RHGUI_CloseButton.MouseButton1Click:Connect(DenyExport)
 Conn_RHClose2		= RHGUI_NoButton.MouseButton1Click:Connect(DenyExport)
 
 -- Does the opposite of the previous function, showing the confirmation dialog instead of the main GUI.
 Conn_ExportBtn		= export_button.MouseButton1Click:Connect(function()
-	message.Visible = false
-	RHGUI_DialogBox.Visible = true
+	if Permissions.CanExport then
+		message.Visible = false
+		
+		-- Hide all buttons attached to the message box; When saving begins, the message box is used by the API to show its status.
+		save_button.Visible = false
+		check_button.Visible = false
+		close_button.Visible = false
+		export_button.Visible = false
+		
+		RHGUI_DialogBox.Visible = true
+	end
 end)
 
 local SavePrefix	= "RH Clothing Save #"
@@ -1183,6 +1197,9 @@ Conn_RHYesBtn		= RHGUI_YesButton.MouseButton1Click:Connect(function()
 		UpdateButton("check", false)
 		UpdateButton("close", false)
 		UpdateButton("export", false)
+		
+		RHGUI_DialogBox.Visible = false	-- Hide the dialog box, leaving the player without any GUI.
+		message.Visible = true	-- Show the message box for status updates (by the Recreation API).
 		
 		local FoundSlot	= false
 		local SaveSlot	= 1
@@ -1212,5 +1229,8 @@ Conn_RHYesBtn		= RHGUI_YesButton.MouseButton1Click:Connect(function()
 		UpdateButton("check", true)
 		UpdateButton("close", true)
 		UpdateButton("export", false)
+		message.Visible = true
 	end
 end)
+
+Recreator.SetStatusGui(message)
