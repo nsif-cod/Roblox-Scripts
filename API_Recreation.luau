@@ -2043,7 +2043,7 @@ local function GetValue(_value : any, _type : string)
 		-- Did either of the previous function calls succeed? If so, use the sequence! If not, just generate an ugly placeholder and use that instead.
 		if success then return sequence
 		else
-			warn("Xane's Model Recreator (Plugin) - Couldn't convert a ColorSequence properly!", sequence)
+			warn("Recreation API - Couldn't convert a ColorSequence properly!", sequence)
 			return ColorSequence.new(Color3.new(1,1,1), Color3.new(0,0,0))
 		end
 	elseif _type == "NumberSequence" then
@@ -2063,7 +2063,7 @@ local function GetValue(_value : any, _type : string)
 		-- Did either of the previous function calls succeed? If so, use the sequence! If not, just generate an ugly placeholder and use that instead.
 		if success then return sequence
 		else
-			warn("Xane's Model Recreator (Plugin) - Couldn't convert a NumberSequence properly!", sequence)
+			warn("Recreation API - Couldn't convert a NumberSequence properly!", sequence)
 			return NumberSequence.new(1, 0)
 		end
 	elseif _type == "NumberRange" then
@@ -2812,9 +2812,10 @@ function ImportAsset(_header : any, _pieces : {any}, _config : XRecreatorLoadCon
 	if not _config or type(_config) ~= "table" then	-- If settings weren't given, define the default set.
 		_config = {
 			Destination					= nil,
-			AddMaterials				= false,
+			AddMaterials				= true,
 			ApplyLighting				= false
 		}
+		print("No import settings were found; Defaulting to no destination, importing materials, and no lighting...")
 	end
 	
 	-- Any Models created by this function will be returned to the caller. When everything's pladced in a specific place, the
@@ -2865,6 +2866,7 @@ function ImportAsset(_header : any, _pieces : {any}, _config : XRecreatorLoadCon
 				NewImposter.Name				= ImposterDestInfo[#_header.ImposterIds][i].Instance.Name
 			end
 			NewImposter.Parent					= OuterContainer or ImposterDestInfo[#_header.ImposterIds][i].Instance
+			Result[ImposterDestInfo[#_header.ImposterIds][i].Instance.Name] = NewImposter	-- Add this Model to the Result's reference list.
 			DebugIDList[_header.ImposterIds[i]] = NewImposter	-- Link this Instance to its intended debug ID.
 			ImposterDB[ImposterDestInfo[#_header.ImposterIds][i].AbbrevDestName] = NewImposter
 		end
@@ -2880,11 +2882,12 @@ function ImportAsset(_header : any, _pieces : {any}, _config : XRecreatorLoadCon
 		TempDirectory.Size						= Vector3.one
 		TempDirectory.Anchored					= true
 		TempDirectory.Name						= "Importing... Please wait."
-		TempDirectory.Parent					= CoreGui
+		TempDirectory.Parent					= ReplicatedStorage
 		
 		-- If it's been requested for this import, go ahead and recreate any MaterialVariants that the originating game was using.
 		-- Without these, meshes may look off, so that's why UseMateirals is set by default.
 		if _header.MaterialVariants and #_header.MaterialVariants > 0 and _config.AddMaterials then
+			print("Importing", #_header.MaterialVariants, "MaterialVariants...")
 			-- Create a new folder for this import's materials, to keep existing projects 
 			local MatFolder						= Instance.new("Folder")
 			MatFolder.Name						= _header.Metadata.Name	-- .. "_" .. HttpService:GenerateGUID(false):sub(1,8)	-- Append 8 random digits.
@@ -2928,7 +2931,7 @@ function ImportAsset(_header : any, _pieces : {any}, _config : XRecreatorLoadCon
 						)
 					end)
 					if not success then
-						warn("Xane's Model Recreator (Plugin) - Piece "..i.." entry "..entry.." tried to use an invalid mesh, "..tostring(inst.MeshId))
+						warn("Recreation API - Piece "..i.." entry "..entry.." tried to use an invalid mesh, "..tostring(inst.MeshId))
 						NewInstance					= Instance.new(temp_classname)	-- Just create a blank MeshPart if it can't be created normally.
 						NewInstance:SetAttribute("ImportFail_MeshId", inst.MeshId)	-- Write the original mesh ID in an attribute in case it helps.
 					end
@@ -3022,21 +3025,21 @@ function ImportAsset(_header : any, _pieces : {any}, _config : XRecreatorLoadCon
 								-- If this is an orphan, at least try to place it in the most appropriate container.
 								inst.Instance.Parent = ImposterDB[_header.PieceInfo[i].InsertLocation]
 							else
-								warn("Xane's Model Recreator (Plugin) - Couldn't find a parent for " .. inst.Name .. "(of piece " .. i .. "). It's removed.")
+								warn("Recreation API - Couldn't find a parent for " .. inst.Name .. "(of piece " .. i .. "). It's removed.")
 								inst.Instance:Destroy()
 							end
 						else
-							warn("Xane's Model Recreator (Plugin) - Unknown class " ..temp_classname .. " encountered. An instance wasn't included!")
+							warn("Recreation API - Unknown class " ..temp_classname .. " encountered. An instance wasn't included!")
 							if inst.Instance then inst.Instance:Destroy() end	-- Delete the Instance to reduce garbage buildup.
 						end
 					end)
 					if not success2 then
-						warn("Xane's Model Recreator (Plugin) - Couldn't finish creating piece "..i.." entry "..entry.." because "..errormsg2)
+						warn("Recreation API - Couldn't finish creating piece "..i.." entry "..entry.." because "..errormsg2)
 					end
 				end
 			end)
 			if not success1 then
-				warn("Xane's Model Recreator (Plugin) - Failed to create piece "..i.." because "..errormsg1)
+				warn("Recreation API - Failed to create piece "..i.." because "..errormsg1)
 			end
 		end
 		
@@ -3065,6 +3068,7 @@ function ImportAsset(_header : any, _pieces : {any}, _config : XRecreatorLoadCon
 		table.clear(ImposterDB)
 		table.clear(DebugIDList)
 	end)
+	print("Import result: Success?", success, "Error:", errormsg)
 	
 	if Recreator.StatusGui == built_in_status then
 		built_in_status.Visible = false
