@@ -1,6 +1,6 @@
 --[[
 	XANE'S RECREATOR API, WRITTEN IN 2024
-	LAST UPDATED ON AUGUST 14TH, 2024
+	LAST UPDATED ON AUGUST 30TH, 2024
 	
 	A script that adds common functions to any Roblox script intended for saving
 	most instances to JSON files, which can be used with Xane's Asset Importer, a
@@ -1734,6 +1734,18 @@ env.XRecreator.ClassData				= {
 		},
 		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
 			UseCmnList_1				= "JointInstance"
+		}
+	},
+	["WeldConstraint"]					= {
+		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
+			Icon						= "🔗",	-- Emoji used to represent this instance when it's unselected.
+			CreateTest					= true,	-- Create an Instance of this type when testing the script in Roblox Studio.
+			CanView						= "no"	-- Can the camera focus on this instance?
+		},
+		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
+			Enabled						= "boolean",
+			Part0						= "Instance",
+			Part1						= "Instance"
 		}
 	},
 	["WorldModel"]							= {

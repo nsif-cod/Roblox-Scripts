@@ -1761,6 +1761,18 @@ local ClassData							= {
 			UseCmnList_1				= "JointInstance"
 		}
 	},
+	["WeldConstraint"]					= {
+		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
+			Icon						= "🔗",	-- Emoji used to represent this instance when it's unselected.
+			CreateTest					= true,	-- Create an Instance of this type when testing the script in Roblox Studio.
+			CanView						= "no"	-- Can the camera focus on this instance?
+		},
+		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
+			Enabled						= "boolean",
+			Part0						= "Instance",
+			Part1						= "Instance"
+		}
+	},
 	["WorldModel"]							= {
 		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
 			Icon						= "🌎",	-- Emoji used to represent this instance when it's unselected.
@@ -2036,7 +2048,7 @@ local function GetValue(_value : any, _type : string)
 	if typeof(_value) == "nil"  then
 		return nil	-- JSON supports nil values! It writes "null" instead of "nil".
 	end
-
+	
 	-- Basic variables can be used as-is, safely.
 	if _type == "boolean" or _type == "number" or _type == "string" then
 		return _value
@@ -2076,7 +2088,7 @@ local function GetValue(_value : any, _type : string)
 		if not success and sequence:find("space after") then
 			success, sequence = ParseSequence(_value:sub(1,-2), "number")
 		end
-
+		
 		-- Did either of the previous function calls succeed? If so, use the sequence! If not, just generate an ugly placeholder and use that instead.
 		if success then return sequence
 		else
@@ -2390,8 +2402,11 @@ local InvalidClasses					= {
 	"PlayerGui"
 }
 function ImportAsset()
+	-- table.clear(DebugIDList)
+	table.clear(ImposterDB)
+	
 	local currentAction	=
-		ChangeHistoryService:TryBeginRecording("XMR_importAsset", "Import asset(s) from " .. Header.Metadata.Name or "Unknown")
+		ChangeHistoryService:TryBeginRecording("XMR_importAsset", "Import asset(s) from " .. (Header.Metadata.Name or "Unknown"))
 	--[[
 		First, create the four container imposters. Imported assets will be inserted into these, which keeps the workspace organized!
 		One Model is created and any relevant metadata is used to help the user identify an import, in case they're doing a bulk operation.
@@ -2498,7 +2513,7 @@ function ImportAsset()
 			-- all of the Instances exist; Some properties link Instances together, so we need a complete list of debug IDs before then.
 			NewInstance.Name				= inst.Name
 			NewInstance.Parent				= TempDirectory	-- TODO: Try commenting this out once Instances are parented to their intended parents.
-			DebugIDList[inst.DebugId] = NewInstance	-- Add this Instance to the debug ID array.
+			DebugIDList[inst.DebugId]		= NewInstance	-- Add this Instance to the debug ID array.
 			PieceData[i][entry].Instance	= NewInstance	-- Also store a reference to the final Instance inside of its PieceData entry.
 			
 			-- If this instance had attributes set on it, restore those by applying them to this instance.
