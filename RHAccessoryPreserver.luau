@@ -1,6 +1,6 @@
 --[[
 	ROYALE HIGH ACCESSORY PRESERVER, WRITTEN IN 2024	|
-	LAST UPDATED ON AUGUST 4TH, 2024					|
+	LAST UPDATED ON SEPTEMBER 13TH, 2024				|
 	____________________________________________________/
 	PURPOSE
 	Royale High has a lot of beautiful, well-designed clothes, but with more recent sets (~2024), it has
@@ -178,6 +178,13 @@ if not Recreator.ActivateAPI(true) then	-- Attempt to claim the API; If it's in 
 	return false
 end
 
+--[[
+	Figure out if we're in the Campus 3 dorms, based on the current place ID. When in the dorms, this script scans the workspace for
+	this player's dorm, and if it exists, it will target/save the most recent furniture item added to their dorm instead of their
+	own clothes.
+]]--
+local IsDorms							= if game.PlaceId == 1067660288 then true else false
+
 -- CONNECTIONS & VARIABLES
 --[[
 	This script is designed in a mostly event-driven fashion, relying on Roblox's ChildAdded/ChildRemoved events to
@@ -205,6 +212,10 @@ local Conn_CloseBtn : RBXScriptConnection	= nil	-- Disconnects all event connect
 local Conn_SidebarVis : RBXScriptConnection	= nil	-- Toggle GUI visibility toggle detection event.
 local Conn_CharAdded : RBXScriptConnection	= nil	-- This player's CharacterAdded event. This ends the script, as it breaks GUI references.
 local Conn_CharRemove : RBXScriptConnection	= nil	-- This player's CharacterRemoving event, which also causes a self-destruct.
+
+local Conn_DormCheck : RBXScriptConnection	= nil	-- Workspace.ChildAdded check, used to detect when the player's dorm appears.
+local Conn_FurniAdd : RBXScriptConnection	= nil	-- ChildAdded event for DormFurniture model, which updates the "furniture" pointer.
+local Conn_FurniRem : RBXScriptConnection	= nil	-- ChildRemoved event for that model. Clears the pointer/reference if it's set.
 
 local Permissions							= {
 	CanSave = false,								-- If TRUE, allows cloning the player's current targetted clothing when clicking 💾Save.
@@ -237,6 +248,10 @@ end
 local AccessoryFolder : Folder?				= FullFolder1:FindFirstChild(LocalPlayer.Name)
 local SkirtFolder : Folder?					= FullFolder2:FindFirstChild(LocalPlayer.Name)
 local HeelFolder : Folder?					= FullFolder3:FindFirstChild(LocalPlayer.Name)
+
+local DormPart : Part?						= nil	-- Reference to the outer Part that has a matching user ID.
+local FurniContainer : Model?				= nil	-- DormFurniture model within the player's dorm.
+local LatestFurniture : Model?				= nil	-- The most recent Model that appeared inside DormFurniture.
 
 -- REFERENCES - RH's PREVIEW GUI
 --[[
@@ -826,6 +841,10 @@ local function Shutdown(_playAnim : boolean)
 	DisconnectEvent(Conn_CloseBtn)
 	DisconnectEvent(Conn_SidebarVis)
 	
+	DisconnectEvent(Conn_DormCheck)
+	DisconnectEvent(Conn_FurniAdd)
+	DisconnectEvent(Conn_FurniRem)
+	
 	if _playAnim then
 		message:TweenPosition(
 			BarPos_Inactive,
@@ -930,38 +949,43 @@ local function Request1ModelValidation()
 		
 		message.Text = "Checking for a compatible target..."
 		UpdateQueued = true
-		local temp_folderList = {AccessoryFolder,SkirtFolder,HeelFolder}
-		for num,category in temp_folderList do
-			local temp_result = GetTargetInFolder(category)
-			if temp_result.Count > 0 then	-- Even if the folder contains multiple items, this function won't bother checking other folders
-				if temp_result.Count == 1 and temp_result.Target then
-					Target = temp_result.Target
-					message.Text = "Found " .. Target.Name .. "! Trying to get a more specific name for it..."
-					
-					-- Although a "shoes" Model is placed in the Heels sub-folder, it only contains a value with its name! The actual
-					-- 3D model is within the player's character model, so it has to be saved.
-					
-					-- Well, the info above applies to most "modern" shoes, but some older items like the "Glittering Jelly Platforms"
-					-- function more like accessories. While this hasn't been confirmed yet, their meshes are likely found within the
-					-- "Heels" model in that folder.
-					
-					-- There's an easy way to tell if shoes replace the player's leg parts; When this happens, their legs become basic,
-					-- hidden block Parts. If the player's UpperLeftLeg is a Part, these are "modern", so the player's Character model
-					-- itself will be saved instead of the "Heels" model.
-					if Target.Name == "Heels" then
-						if LeftUpperLeg and LeftUpperLeg:IsA("Part") then	-- If it's a Part, it was replaced. Save the whole character!
-							Target = Character
+		
+		if not LatestFurniture then
+			local temp_folderList = {AccessoryFolder,SkirtFolder,HeelFolder}
+			for num,category in temp_folderList do
+				local temp_result = GetTargetInFolder(category)
+				if temp_result.Count > 0 then	-- Even if the folder contains multiple items, this function won't bother checking other folders
+					if temp_result.Count == 1 and temp_result.Target then
+						Target = temp_result.Target
+						message.Text = "Found " .. Target.Name .. "! Trying to get a more specific name for it..."
+						
+						-- Although a "shoes" Model is placed in the Heels sub-folder, it only contains a value with its name! The actual
+						-- 3D model is within the player's character model, so it has to be saved.
+						
+						-- Well, the info above applies to most "modern" shoes, but some older items like the "Glittering Jelly Platforms"
+						-- function more like accessories. While this hasn't been confirmed yet, their meshes are likely found within the
+						-- "Heels" model in that folder.
+						
+						-- There's an easy way to tell if shoes replace the player's leg parts; When this happens, their legs become basic,
+						-- hidden block Parts. If the player's UpperLeftLeg is a Part, these are "modern", so the player's Character model
+						-- itself will be saved instead of the "Heels" model.
+						if Target.Name == "Heels" then
+							if LeftUpperLeg and LeftUpperLeg:IsA("Part") then	-- If it's a Part, it was replaced. Save the whole character!
+								Target = Character
+							end
 						end
+						break
+					end
+					if num < #temp_folderList then
+						message.Text = "You're wearing 2+ " .. category.Name .. "! Unequip everything to check " ..
+							temp_folderList[num+1].Name .. " or just wear the single item you want to save, then tap CHECK again."
+					else message.Text = "You aren't wearing any accessories, a skirt, or shoes. Please equip or use Try On (Shop) to continue."
 					end
 					break
 				end
-				if num < #temp_folderList then
-					message.Text = "You're wearing 2+ " .. category.Name .. "! Unequip everything to check " ..
-						temp_folderList[num+1].Name .. " or just wear the single item you want to save, then tap CHECK again."
-				else message.Text = "You aren't wearing any accessories, a skirt, or shoes. Please equip or use Try On (Shop) to continue."
-				end
-				break
 			end
+		else	-- When in a dorm, this script locks onto the last thing that spawned, completely ignoring the player's character.
+			Target = LatestFurniture	-- This won't work for furniture that doesn't show the "PreviewToggles" GUI, but oh well...
 		end
 		
 		-- If a valid target was found, assume it's the selected item that the player's customizing.
@@ -1079,6 +1103,7 @@ Conn_CheckBtn		= check_button.MouseButton1Click:Connect(function()
 			wait(0.125)
 		]]--
 		
+		FindDorm()	-- Try to set up dorm-related variables so furniture and halo variations/toggles can be saved easily.
 		Request1ModelValidation()
 	end
 end)
@@ -1249,5 +1274,51 @@ Conn_RHYesBtn		= RHGUI_YesButton.MouseButton1Click:Connect(function()
 		message.Visible = true
 	end
 end)
+
+--[[
+	DORM FURNITURE SUPPORT (HACKISH, INCOMPLETE, AND MOST LIKELY BROKEN)
+	The code below manages the special "dorm reference variables", which lock onto the player's dorm Part, their DormFurniture model,
+	and the most recently-added piece of furniture in the room. The regular code used above for clothing will check these variables
+	and try to save it instead of an accessory if everything is defined.
+]]--
+if IsDorms then
+	message.Text ..= " Claim a dorm then tap CHECK to lock onto it!"
+end
+
+-- Looks for a part named after this player's user ID; When a player owns a dorm, its outer Part is renamed (I think).
+function FindDorm()
+	if IsDorms then
+		DormPart = workspace:FindFirstChild(LocalPlayer.UserId)
+		if DormPart and DormPart:IsA("Part") then
+			if not FurniContainer then	-- Only set up furniture-related stuff if the reference hasn't been set up yet.
+				FurniContainer = DormPart:FindFirstChild("DormFurniture")
+				Conn_FurniAdd = FurniContainer.ChildAdded:Connect(function(_newItem)
+					if _newItem:IsA("Model") then
+						task.wait()	-- Intentionally wait in case a race condition is caused by a Model appearing and disappearing at once.
+						LatestFurniture = _newItem	-- Try to capture this piece of furniture the next time CHECK is tapped.
+						message.Text	= "A new item appeared in your dorm, and may be save-able!"
+					end
+				end)
+				Conn_FurniRem = FurniContainer.ChildRemoved:Connect(function(_item)
+					if LatestFurniture then
+						LatestFurniture = nil	-- When anything is removed from the dorm, this script will detach from it.
+						message.Text	= "Something was removed or unloaded from your dorm, and has been untargeted."
+					end
+				end)
+			end
+			
+		else	-- If there's somehow another Instance with the player's user ID in the dorm realm, it cannot be used.
+			DormPart = nil
+			if FurniContainer then
+				FurniContainer = nil
+				DisconnectEvent(Conn_FurniAdd)
+				DisconnectEvent(Conn_FurniRem)
+			end
+			
+		end
+	end
+	
+	return
+end
 
 Recreator.SetStatusGui(message)
