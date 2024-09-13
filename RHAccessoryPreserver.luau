@@ -133,6 +133,21 @@ type ClassDefinition		= {
 	Props							: {string}		-- List of properties that should be saved or loaded to/from JSON for this instance.
 }
 
+-- Dictionary returned after successfully importing/loading serialized JSON data using Recreator.Load(). Each key is named after
+-- and points to the Model that the function placed your imported Instances into, and will be nil if nothing was imported to a
+-- location. If the third argument is true, all models will be put inside of another Model in CoreGui (hidden from LocalScripts).
+type XRecreatorImportResult	= {
+	Workspace			: Model?,
+	Players				: Model?,
+	Lighting			: Model?,
+	ReplicatedStorage	: Model?,
+	StarterGui			: Model?,
+	SoundService		: Model?,
+	StarterPack			: Model?
+}
+
+-- The contents of getgenv().XRecreator after the Recreation API initializes. These functions send commands to the API, making
+-- it very easy to automate actions like selecting Instances, saving them to JSON files, and loading stuff FROM those files.
 type ModelRecreatorStruct	= {
 	-- FUNCTIONS
 	Select		: (_mode:"set"|"add"|"remove", _list:{Instance}) -> (),	-- Updates the API's selection.
@@ -143,6 +158,8 @@ type ModelRecreatorStruct	= {
 	SetStatusGui: (_gui:TextLabel) -> (nil),							-- Changes GUI that save status is shown in. Set to nil to use default.
 	OnSaveDone	: (_success : boolean) -> (),							-- External code ran upon finishing. Used for other scripts' cleanup.
 	IsInstanceAllowed : (_instance : Instance) -> (boolean),			-- Checks if an Instance's type is safe to save. (Model Recreator v3)
+	Load		: (_header:string,_pieces:{string},_dest:Instance?) -> (XRecreatorImportResult?),	-- Import previously saved JSON instances.
+	LoadFile	: (_saveName:string,_dest:Instance?) -> (XRecreatorImportResult?),	-- Loads from a JSON capture set, passing to Load().
 
 	-- VARIABLES
 	Reserved	: boolean,												-- Set to TRUE after a script calls ActivateAPI().
@@ -152,7 +169,7 @@ type ModelRecreatorStruct	= {
 	StatusGui	: TextLabel,											-- Reference to current label that save/index statuses are shown in.
 	PageLength	: number,												-- How many instances SHOULD be shown on list pages. (Not used by API.)
 	AntiLagInterval : number,											-- How many instances to parse before waiting, to reduce lag.
-	ClassData	: {ClassDefinition}										-- This script's "Roblox class API" (read-onlu).
+	ClassData	: {ClassDefinition}									-- This script's "Roblox class API" (read-only).
 }
 local Recreator : ModelRecreatorStruct = env.XRecreator	-- Let's simplify references to the API by just defining a new "shortcut" variable.
 if not Recreator.ActivateAPI(true) then	-- Attempt to claim the API; If it's in use, the script will stop here.
