@@ -901,6 +901,52 @@ local function GetTargetInFolder(_directory : Folder)
 	return details
 end
 
+--[[
+	DORM FURNITURE SUPPORT (HACKISH, INCOMPLETE, AND MOST LIKELY BROKEN)
+	The code below manages the special "dorm reference variables", which lock onto the player's dorm Part, their DormFurniture model,
+	and the most recently-added piece of furniture in the room. The regular code used above for clothing will check these variables
+	and try to save it instead of an accessory if everything is defined.
+]]--
+if IsDorms then
+	message.Text ..= " Claim a dorm then tap CHECK to lock onto it!"
+end
+
+-- Looks for a part named after this player's user ID; When a player owns a dorm, its outer Part is renamed (I think).
+local function FindDorm()
+	if IsDorms then
+		DormPart = workspace:FindFirstChild(LocalPlayer.UserId)
+		if DormPart and DormPart:IsA("Part") then
+			if not FurniContainer then	-- Only set up furniture-related stuff if the reference hasn't been set up yet.
+				FurniContainer = DormPart:FindFirstChild("DormFurniture")
+				Conn_FurniAdd = FurniContainer.ChildAdded:Connect(function(_newItem)
+					if _newItem:IsA("Model") then
+						task.wait()	-- Intentionally wait in case a race condition is caused by a Model appearing and disappearing at once.
+						LatestFurniture = _newItem	-- Try to capture this piece of furniture the next time CHECK is tapped.
+						message.Text	= "A new item appeared in your dorm, and may be save-able!"
+					end
+				end)
+				Conn_FurniRem = FurniContainer.ChildRemoved:Connect(function(_item)
+					if LatestFurniture then
+						LatestFurniture = nil	-- When anything is removed from the dorm, this script will detach from it.
+						message.Text	= "Something was removed or unloaded from your dorm, and has been untargeted."
+					end
+				end)
+			end
+			
+		else	-- If there's somehow another Instance with the player's user ID in the dorm realm, it cannot be used.
+			DormPart = nil
+			if FurniContainer then
+				FurniContainer = nil
+				DisconnectEvent(Conn_FurniAdd)
+				DisconnectEvent(Conn_FurniRem)
+			end
+			
+		end
+	end
+	
+	return
+end
+
 -- For some reason, the preview GUI uses the Starlight Skirt's name as placeholder text. Annoyingly, this script believes it's
 -- legitimately the item the player's wearing and creates a folder for it using the function below. Since this skirt is a real
 -- item, I can't just ignore this specific name, in case the player wants to save it.
@@ -1296,51 +1342,5 @@ Conn_RHYesBtn		= RHGUI_YesButton.MouseButton1Click:Connect(function()
 		message.Visible = true
 	end
 end)
-
---[[
-	DORM FURNITURE SUPPORT (HACKISH, INCOMPLETE, AND MOST LIKELY BROKEN)
-	The code below manages the special "dorm reference variables", which lock onto the player's dorm Part, their DormFurniture model,
-	and the most recently-added piece of furniture in the room. The regular code used above for clothing will check these variables
-	and try to save it instead of an accessory if everything is defined.
-]]--
-if IsDorms then
-	message.Text ..= " Claim a dorm then tap CHECK to lock onto it!"
-end
-
--- Looks for a part named after this player's user ID; When a player owns a dorm, its outer Part is renamed (I think).
-function FindDorm()
-	if IsDorms then
-		DormPart = workspace:FindFirstChild(LocalPlayer.UserId)
-		if DormPart and DormPart:IsA("Part") then
-			if not FurniContainer then	-- Only set up furniture-related stuff if the reference hasn't been set up yet.
-				FurniContainer = DormPart:FindFirstChild("DormFurniture")
-				Conn_FurniAdd = FurniContainer.ChildAdded:Connect(function(_newItem)
-					if _newItem:IsA("Model") then
-						task.wait()	-- Intentionally wait in case a race condition is caused by a Model appearing and disappearing at once.
-						LatestFurniture = _newItem	-- Try to capture this piece of furniture the next time CHECK is tapped.
-						message.Text	= "A new item appeared in your dorm, and may be save-able!"
-					end
-				end)
-				Conn_FurniRem = FurniContainer.ChildRemoved:Connect(function(_item)
-					if LatestFurniture then
-						LatestFurniture = nil	-- When anything is removed from the dorm, this script will detach from it.
-						message.Text	= "Something was removed or unloaded from your dorm, and has been untargeted."
-					end
-				end)
-			end
-			
-		else	-- If there's somehow another Instance with the player's user ID in the dorm realm, it cannot be used.
-			DormPart = nil
-			if FurniContainer then
-				FurniContainer = nil
-				DisconnectEvent(Conn_FurniAdd)
-				DisconnectEvent(Conn_FurniRem)
-			end
-			
-		end
-	end
-	
-	return
-end
 
 Recreator.SetStatusGui(message)
