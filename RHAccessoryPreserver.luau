@@ -224,7 +224,6 @@ local Conn_SidebarVis : RBXScriptConnection	= nil	-- Toggle GUI visibility toggl
 local Conn_CharAdded : RBXScriptConnection	= nil	-- This player's CharacterAdded event. This ends the script, as it breaks GUI references.
 local Conn_CharRemove : RBXScriptConnection	= nil	-- This player's CharacterRemoving event, which also causes a self-destruct.
 
-local Conn_DormCheck : RBXScriptConnection	= nil	-- Workspace.ChildAdded check, used to detect when the player's dorm appears.
 local Conn_FurniAdd : RBXScriptConnection	= nil	-- ChildAdded event for DormFurniture model, which updates the "furniture" pointer.
 local Conn_FurniRem : RBXScriptConnection	= nil	-- ChildRemoved event for that model. Clears the pointer/reference if it's set.
 
@@ -295,7 +294,7 @@ xcapture_gui.Parent = game:GetService("CoreGui")
 
 local message = Instance.new("TextLabel")
 message.Font = Enum.Font.RobotoCondensed
-message.Text = "Hello, exploiter! This script is still initializing, so...just sit tight, alright?"
+message.Text = "Did the script seriously break...?"
 message.TextColor3 = Color3.new(1, 1, 1)
 message.TextScaled = true
 message.TextStrokeColor3 = Color3.new(0.921569, 0.345098, 0.823529)
@@ -850,7 +849,6 @@ local function Shutdown(_playAnim : boolean)
 	DisconnectEvent(Conn_CloseBtn)
 	DisconnectEvent(Conn_SidebarVis)
 	
-	DisconnectEvent(Conn_DormCheck)
 	DisconnectEvent(Conn_FurniAdd)
 	DisconnectEvent(Conn_FurniRem)
 	
@@ -901,6 +899,34 @@ local function GetTargetInFolder(_directory : Folder)
 	return details
 end
 
+-- For some reason, the preview GUI uses the Starlight Skirt's name as placeholder text. Annoyingly, this script believes it's
+-- legitimately the item the player's wearing and creates a folder for it using the function below. Since this skirt is a real
+-- item, I can't just ignore this specific name, in case the player wants to save it.
+
+-- It may be hackish, but this script won't create a folder for this specific sentence, which helpfully tells the player what
+-- they have to do to continue. This will only be noticeable if the player's trying on or wearing this specific skirt, though.
+local SaveDisabledName = "Please close then re-open this GUI."
+if GUI_Base.ItemName.Text == "Starlight Skirt" then
+	GUI_Base.ItemName.Text = SaveDisabledName
+end
+-- SetSaveFolder (takes optional string, returns nil)
+-- A short function that checks for a folder with a specified name, creating it if it doesn't exist.
+-- Regardless, the global SaveFolder variable is updated to point to it.
+local function SetSaveFolder(_itemName : string?)
+	if _itemName and _itemName ~= SaveDisabledName then
+		SaveFolder = SaveBase:FindFirstChild(_itemName)
+		if not SaveFolder then	-- If the sub-folder doesn't exist, create a new one.
+			SaveFolder								= Instance.new("Folder")
+			SaveFolder.Name							= _itemName
+			SaveFolder.Parent						= SaveBase
+		end
+	else	-- If a nil value is provided, just invalidate the variable.
+		SaveFolder									= nil
+	end
+	
+return nil
+end
+
 --[[
 	DORM FURNITURE SUPPORT (HACKISH, INCOMPLETE, AND MOST LIKELY BROKEN)
 	The code below manages the special "dorm reference variables", which lock onto the player's dorm Part, their DormFurniture model,
@@ -945,34 +971,6 @@ local function FindDorm()
 	end
 	
 	return
-end
-
--- For some reason, the preview GUI uses the Starlight Skirt's name as placeholder text. Annoyingly, this script believes it's
--- legitimately the item the player's wearing and creates a folder for it using the function below. Since this skirt is a real
--- item, I can't just ignore this specific name, in case the player wants to save it.
-
--- It may be hackish, but this script won't create a folder for this specific sentence, which helpfully tells the player what
--- they have to do to continue. This will only be noticeable if the player's trying on or wearing this specific skirt, though.
-local SaveDisabledName = "Please close then re-open this GUI."
-if GUI_Base.ItemName.Text == "Starlight Skirt" then
-	GUI_Base.ItemName.Text = SaveDisabledName
-end
--- SetSaveFolder (takes optional string, returns nil)
--- A short function that checks for a folder with a specified name, creating it if it doesn't exist.
--- Regardless, the global SaveFolder variable is updated to point to it.
-local function SetSaveFolder(_itemName : string?)
-	if _itemName and _itemName ~= SaveDisabledName then
-		SaveFolder = SaveBase:FindFirstChild(_itemName)
-		if not SaveFolder then	-- If the sub-folder doesn't exist, create a new one.
-			SaveFolder								= Instance.new("Folder")
-			SaveFolder.Name							= _itemName
-			SaveFolder.Parent						= SaveBase
-		end
-	else	-- If a nil value is provided, just invalidate the variable.
-		SaveFolder									= nil
-	end
-	
-return nil
 end
 
 --[[
@@ -1201,7 +1199,9 @@ save_button.MouseButton1Click:Connect(function()
 		
 		local NewClone = Target:Clone()
 		NewClone.Name = SaveName
-		if NewClone:FindFirstChildOfClass("Humanoid") then	-- 2D clothes and the player's face texture(s) aren't saved when saving shoes.
+		
+		-- 2D clothes and the player's face texture(s) aren't saved when saving shoes.
+		if GUI_Base == GUIBase_Clothing and NewClone:FindFirstChildOfClass("Humanoid") then
 			local shirt = NewClone:FindFirstChildOfClass("Shirt")
 			local pants = NewClone:FindFirstChildOfClass("Pants")
 			local shirtGFX = NewClone:FindFirstChildOfClass("ShirtGraphic")
@@ -1233,6 +1233,8 @@ save_button.MouseButton1Click:Connect(function()
 		UpdateButton("export", true)	-- Now that something was saved, the export button is usable!
 		UpdateButton("close", true)
 		UpdateButton("check", true)
+	elseif not Target then message.Text = "Sorry, but nothing has been selected to be saved yet!"
+	elseif not Permissions.CanSave then message.Text = "Saving is currently disabled!"
 	end
 end)
 
