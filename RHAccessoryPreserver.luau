@@ -61,6 +61,12 @@ local Color_ButtonDisabled					= Color3.new(0.2,0.4425,0.5)
 local BarPos_Active							= UDim2.fromScale(0.975,0.025)
 local BarPos_Inactive						= UDim2.fromScale(0.975,-0.333)
 
+-- Though it looks like both use the same toggle/variation seleciton GUI, clothes and furniture actually use separate copies of the same
+-- GUI design; Everything inside both of the frames has the same layout, so this script will change between them depending on what it's
+-- targetting.
+local GUIBase_Clothing						= PlayerGui.PreviewToggles.PreviewTogglesFrame
+local GUIBase_Furniture						= PlayerGui.DecorateModeGui.TogglesFrameNEW
+
 local EquippedStorage						= workspace:FindFirstChild("EquippedStorage")
 if not EquippedStorage then
 	error("RH Accessory Preserver - You aren't currently playing Royale High, or are in a realm without an EquippedStorage folder.")
@@ -263,9 +269,7 @@ local LatestFurniture : Model?				= nil	-- The most recent Model that appeared i
 	This name doubles as an idenfifier; If this exact version has already been saved to Lighting, nothing
 	will happen.
 ]]--
-local GUI_Base			= PlayerGui.PreviewToggles
-local GUI_ToggleList	= GUI_Base.PreviewTogglesFrame.Inner	-- Grid of toggle previews. The selected toggle has an outline around it.
-local GUI_VarList		= GUI_Base.PreviewTogglesFrame.DynamicToggleVariants.ToggleCycleFrame	-- List of variation categories!
+local GUI_Base								= GUIBase_Clothing	-- This changes between the clothing/furniture customization Frames as needed.
 
 -- SCRIPT GUI
 -- Although this script is relatively simple, it uses a GUI to show its current status and make it easy to save and stop the script.
@@ -899,8 +903,8 @@ end
 -- It may be hackish, but this script won't create a folder for this specific sentence, which helpfully tells the player what
 -- they have to do to continue. This will only be noticeable if the player's trying on or wearing this specific skirt, though.
 local SaveDisabledName = "Please close then re-open this GUI."
-if GUI_Base.PreviewTogglesFrame.ItemName.Text == "Starlight Skirt" then
-	GUI_Base.PreviewTogglesFrame.ItemName.Text = SaveDisabledName
+if GUI_Base.ItemName.Text == "Starlight Skirt" then
+	GUI_Base.ItemName.Text = SaveDisabledName
 end
 -- SetSaveFolder (takes optional string, returns nil)
 -- A short function that checks for a folder with a specified name, creating it if it doesn't exist.
@@ -984,14 +988,16 @@ local function Request1ModelValidation()
 					break
 				end
 			end
+			GUI_Base = GUIBase_Clothing		-- If any of the code above ran, we're targeting clothing, so let's reference "PreviewToggles".
 		else	-- When in a dorm, this script locks onto the last thing that spawned, completely ignoring the player's character.
 			Target = LatestFurniture	-- This won't work for furniture that doesn't show the "PreviewToggles" GUI, but oh well...
+			GUI_Base = GUIBase_Furniture	-- Check the dorm furniture editing GUI for this item's name and other info.
 		end
 		
 		-- If a valid target was found, assume it's the selected item that the player's customizing.
 		if Target then
-			if GUI_Base.PreviewTogglesFrame.Visible then	-- Is the preview GUI visible? We'll grab detailed info from it!
-				local ItemName : TextLabel					= GUI_Base.PreviewTogglesFrame:FindFirstChild("ItemName")
+			if GUI_Base.Visible then	-- Is the preview GUI visible? We'll grab detailed info from it!
+				local ItemName : TextLabel					= GUI_Base:FindFirstChild("ItemName")
 				
 				if ItemName == SaveDisabledName then
 					message.Text = "Oh... Do you want to save the Starlight Skirt? Please close then re-open the toggle preview GUI." ..
@@ -1008,7 +1014,7 @@ local function Request1ModelValidation()
 				SetSaveFolder(ItemName.Text)
 				
 				-- Figure out the player's current toggle number by checking each sub-frame's UIStroke visibility. Selected toggles are outlined.
-				for _,toggle in GUI_ToggleList:GetChildren() do
+				for _,toggle in GUI_Base.Inner:GetChildren() do
 					if toggle:IsA("Frame") then
 						if toggle:FindFirstChild("UIStrokeSelected") and toggle:FindFirstChild("UIStrokeSelected").Enabled then
 							ToggleNum = tonumber(toggle.ToggleNumber.Text)	-- Get the small number in its upper left corner and use that.
@@ -1018,7 +1024,7 @@ local function Request1ModelValidation()
 				end
 				
 				-- Next, iterate through this item's variation "categories" and get their information by using some "string magic".
-				for _,category in GUI_VarList:GetChildren() do
+				for _,category in GUI_Base.DynamicToggleVariants.ToggleCycleFrame:GetChildren() do
 					if category:IsA("Frame") then
 						local temp_newEntry	= {
 							CategoryName	= category.Name:sub(7),	-- Remove the first 6 letters (which are usually "Cycle ").
@@ -1057,10 +1063,21 @@ local function Request1ModelValidation()
 				end
 			else	-- Otherwise, there's still hope! See if the target contains a StringValue with its name!
 				local temp_name:StringValue =
-					Target:FindFirstChild("HeelName") or Target:FindFirstChild("AccessoryName") or Target:FindFirstChild("SkirtName")
+					Target:FindFirstChild("HeelName") or
+					Target:FindFirstChild("AccessoryName") or
+					Target:FindFirstChild("SkirtName") or
+					Target:FindFirstChild("NameTag")	-- Dorm furniture
 				if temp_name then
 					SetSaveFolder(temp_name.Value)	-- Save this item's Model to a folder named after the item itself.
-					SaveName = "Item"
+					if GUI_Base == GUIBase_Furniture then	-- Dorm furniture can include a NumberValue with its toggle number inside.
+						local ToggleNum : NumberValue? = Target:FindFirstChild("ToggleIndex")
+						if ToggleNum then	-- If the toggle number Instance exists, use the furniture's name and toggle number as its title.
+							SaveName = temp_name.Value .. " T" .. ToggleNum.Value
+						else SaveName = "Item"	-- Otherwise, fall back on "Item" like clothing.
+						end
+					else
+						SaveName = "Item"
+					end
 				else SetSaveFolder(nil)	-- If a name can't be found, this item just can't be saved.
 				end
 			end
@@ -1111,7 +1128,7 @@ end)
 Conn_SidebarVis		= GUI_Base.PreviewTogglesFrame:GetPropertyChangedSignal("Visible"):Connect(function()
 	UpdateButton("check", true)
 	
-	if GUI_Base.PreviewTogglesFrame.Visible then
+	if GUI_Base.Visible then
 		Request1ModelValidation()
 		if Target then
 			message.Text =
@@ -1182,7 +1199,7 @@ UpdateButton("close", true)
 UpdateButton("export", false)
 
 message.Text = "Welcome to the RH Accessory Preserver!"
-if GUI_Base.PreviewTogglesFrame.Visible then
+if GUI_Base.Visible then
 	if GetTargetInFolder(AccessoryFolder).Count == 1 then
 		message.Text ..= " Tap the CHECK button to 'save' your current toggle/variation combination to a folder in Lighting!"
 	else
