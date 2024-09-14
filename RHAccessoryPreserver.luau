@@ -1,6 +1,6 @@
 --[[
 	ROYALE HIGH ACCESSORY PRESERVER, WRITTEN IN 2024	|
-	LAST UPDATED ON SEPTEMBER 13TH, 2024				|
+	LAST UPDATED ON SEPTEMBER 14TH, 2024				|
 	____________________________________________________/
 	PURPOSE
 	Royale High has a lot of beautiful, well-designed clothes, but with more recent sets (~2024), it has
@@ -1174,24 +1174,29 @@ Conn_CheckBtn		= check_button.MouseButton1Click:Connect(function()
 	end
 end)
 
-Conn_SidebarVis		= GUI_Base.PreviewTogglesFrame:GetPropertyChangedSignal("Visible"):Connect(function()
-	UpdateButton("check", true)
+--[[
+	The code below used to be useful for notifying the user, but it won't work with the new, "dynamic" GUI reference (GUI_Base)m which
+	automatically switches to and from GUIBase_Furniture based on what the validator function above targets. This connection would only
+	latch onto ONE of the Frames (clothing OR dorm furniture) so it wouldn't help with the second GUI. This caused the script to break,
+	so it has been commented out for now.
 	
-	if GUI_Base.Visible then
-		Request1ModelValidation()
-		if Target then
-			message.Text =
-				"Choose the toggle and variation combo you want to save, then tap CHECK to get its details. If everything's fine, tap SAVE."
+	Conn_SidebarVis		= GUI_Base:GetPropertyChangedSignal("Visible"):Connect(function()
+		UpdateButton("check", true)
+		
+		if GUI_Base.Visible then
+			Request1ModelValidation()
+			if Target then
+				message.Text =
+					"Choose the toggle and variation combo you want to save, then tap CHECK to get its details. If everything's fine, tap SAVE."
+			end
+		else
+			Request1ModelValidation()
+			message.Text = "The sidebar was hidden. Equip another SINGLE accessory, skirt, or shoes and you'll be able to save it."
 		end
-	else
-		Request1ModelValidation()
-		message.Text = "The sidebar was hidden. Equip another SINGLE accessory, skirt, or shoes and you'll be able to save it."
-	end
-end)
+	end)
+]]--
 
 Conn_SaveBtn		= save_button.MouseButton1Click:Connect(function()
-	print("Save button was tapped!", Target, Permissions.CanSave)
-	message.Text = "All I know is that the SAVE button was interacted with."
 	if Target and Permissions.CanSave then
 		UpdateButton("save", false)
 		UpdateButton("check", false)
@@ -1235,8 +1240,8 @@ Conn_SaveBtn		= save_button.MouseButton1Click:Connect(function()
 		UpdateButton("export", true)	-- Now that something was saved, the export button is usable!
 		UpdateButton("close", true)
 		UpdateButton("check", true)
-	elseif not Target then message.Text = "Sorry, but nothing has been selected to be saved yet!"
-	elseif not Permissions.CanSave then message.Text = "Saving is currently disabled!"
+	-- elseif not Target then message.Text = "Sorry, but nothing has been selected to be saved yet!"
+	-- elseif not Permissions.CanSave then message.Text = "Saving is currently disabled!"
 	end
 end)
 
