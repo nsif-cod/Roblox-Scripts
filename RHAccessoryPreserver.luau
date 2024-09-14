@@ -1189,7 +1189,9 @@ Conn_SidebarVis		= GUI_Base.PreviewTogglesFrame:GetPropertyChangedSignal("Visibl
 	end
 end)
 
-save_button.MouseButton1Click:Connect(function()
+Conn_SaveBtn		= save_button.MouseButton1Click:Connect(function()
+	print("Save button was tapped!", Target, Permissions.CanSave)
+	message.Text = "All I know is that the SAVE button was interacted with."
 	if Target and Permissions.CanSave then
 		UpdateButton("save", false)
 		UpdateButton("check", false)
@@ -1198,7 +1200,7 @@ save_button.MouseButton1Click:Connect(function()
 		if not Target.Archivable then Target.Archivable = true end	-- Character models aren't saved, so we're fixing that before cloning it.
 		
 		local NewClone = Target:Clone()
-		NewClone.Name = SaveName
+		NewClone.Name = SaveName or "Untitled"
 		
 		-- 2D clothes and the player's face texture(s) aren't saved when saving shoes.
 		if GUI_Base == GUIBase_Clothing and NewClone:FindFirstChildOfClass("Humanoid") then
@@ -1228,7 +1230,7 @@ save_button.MouseButton1Click:Connect(function()
 			end
 		end
 		
-		NewClone.Parent = SaveFolder
+		NewClone.Parent = SaveFolder or SaveBase
 		message.Text = "Save completed! Feel free to change toggles/variations now.\u{000D}\u{000A}" .. SaveName
 		UpdateButton("export", true)	-- Now that something was saved, the export button is usable!
 		UpdateButton("close", true)
