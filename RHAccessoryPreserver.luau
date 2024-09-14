@@ -64,8 +64,13 @@ local BarPos_Inactive						= UDim2.fromScale(0.975,-0.333)
 -- Though it looks like both use the same toggle/variation seleciton GUI, clothes and furniture actually use separate copies of the same
 -- GUI design; Everything inside both of the frames has the same layout, so this script will change between them depending on what it's
 -- targetting.
-local GUIBase_Clothing						= PlayerGui.PreviewToggles.PreviewTogglesFrame
-local GUIBase_Furniture						= PlayerGui.DecorateModeGui.TogglesFrameNEW
+local GUIBase_Clothing : Frame				= PlayerGui.PreviewToggles.PreviewTogglesFrame
+local temp_furniDecorModeGui : ScreenGui?	= PlayerGui:FindFirstChild("DecorateModeGui")
+local GUIBase_Furniture : Frame?			= nil
+if temp_furniDecorModeGui then	-- This GUI only exists in Campus 3's Castle Dorms, so a reference isn't guaranteed outside of it.
+	GUIBase_Furniture						= temp_furniDecorModeGui:FindFirstChild("TogglesFrameNEW")
+end
+temp_furniDecorModeGui						= nil	-- Clear this now-unnecessary variable now, to potentially free up memory.
 
 local EquippedStorage						= workspace:FindFirstChild("EquippedStorage")
 if not EquippedStorage then
