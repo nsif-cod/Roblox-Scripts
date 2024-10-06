@@ -847,7 +847,6 @@ local function Shutdown(_playAnim : boolean)
 	DisconnectEvent(Conn_RHClose2)
 	DisconnectEvent(Conn_RHYesBtn)
 	DisconnectEvent(Conn_CloseBtn)
-	DisconnectEvent(Conn_SidebarVis)
 	
 	DisconnectEvent(Conn_FurniAdd)
 	DisconnectEvent(Conn_FurniRem)
