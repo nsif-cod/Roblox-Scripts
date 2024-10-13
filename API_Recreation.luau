@@ -215,6 +215,14 @@ local CommonPropList					= {
 		DesiredAngle					= "number",
 		MaxVelocity						= "number"
 	},
+	SoundEffect							= {
+		Enabled							= "boolean",
+		Priority						= "number"
+	},
+	WetDrySound							= {
+		DryLevel						= "number",
+		WetLevel						= "number"
+	},
 	SpotAndSurfaceLight					= {
 		Angle							= "number",
 		Face							= "EnumItem",
@@ -565,6 +573,20 @@ env.XRecreator.ClassData				= {
 			Value						= "CFrame"
 		}
 	},
+	["ChorusSoundEffect"]				= {
+		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
+			Icon						= "🔊",	-- Emoji used to represent this instance when it's unselected.
+			CreateTest					= true,	-- Create an Instance of this type when testing the script in Roblox Studio.
+			CanView						= "no"	-- Can the camera focus on this instance?
+		},
+		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
+			UseCmnList_1				= "SoundEffect",	-- Common properties that this class shares with others.
+			-- UseCmnList_2				= "WetDrySound",
+			Depth						= "number",		-- These are the same properties as FlangeSoundEffect! Consider creating a "common list" of these.
+			Mix							= "number",
+			Rate						= "number"
+		}
+	},
 	["Color3Value"]					= {
 		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
 			Icon						= "🔢",	-- Emoji used to represent this instance when it's unselected.
@@ -587,6 +609,23 @@ env.XRecreator.ClassData				= {
 			Contrast					= "number",
 			Saturation					= "number",
 			TintColor					= "Color3"
+		}
+	},
+	["CompressorSoundEffect"]			= {
+		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
+			Icon						= "🔊",	-- Emoji used to represent this instance when it's unselected.
+			CreateTest					= true,	-- Create an Instance of this type when testing the script in Roblox Studio.
+			CanView						= "no"	-- Can the camera focus on this instance?
+		},
+		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
+			UseCmnList_1				= "SoundEffect",	-- Common properties that this class shares with others.
+			-- UseCmnList_2				= "WetDrySound",
+			Attack						= "number",
+			GainMakeup					= "number",
+			Ratio						= "number",
+			Release						= "number",
+			SideChain					= "Instance",
+			Threshold					= "number"
 		}
 	},
 	["Configuration"]					= {	-- Configuration folders don't have any properties other than standard Instance ones.
@@ -632,6 +671,18 @@ env.XRecreator.ClassData				= {
 			NearIntensity				= "number"
 		}
 	},
+	["DistortionSoundEffect"]			= {
+		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
+			Icon						= "🔊",	-- Emoji used to represent this instance when it's unselected.
+			CreateTest					= true,	-- Create an Instance of this type when testing the script in Roblox Studio.
+			CanView						= "no"	-- Can the camera focus on this instance?
+		},
+		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
+			UseCmnList_1				= "SoundEffect",	-- Common properties that this class shares with others.
+			-- UseCmnList_2				= "WetDrySound",
+			Level						= "number"
+		}
+	},
 	["DoubleConstrainedValue"]			= {
 		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
 			Icon						= "🔢",	-- Emoji used to represent this instance when it's unselected.
@@ -641,6 +692,33 @@ env.XRecreator.ClassData				= {
 		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
 			MaxValue					= "number",
 			MinValue					= "number"
+		}
+	},
+	["EchoSoundEffect"]					= {
+		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
+			Icon						= "🔊",	-- Emoji used to represent this instance when it's unselected.
+			CreateTest					= true,	-- Create an Instance of this type when testing the script in Roblox Studio.
+			CanView						= "no"	-- Can the camera focus on this instance?
+		},
+		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
+			UseCmnList_1				= "SoundEffect",	-- Common properties that this class shares with others.
+			UseCmnList_2				= "WetDrySound",
+			Delay						= "number",
+			Feedback					= "number"
+		}
+	},
+	["EqualizerSoundEffect"]			= {
+		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
+			Icon						= "🔊",	-- Emoji used to represent this instance when it's unselected.
+			CreateTest					= true,	-- Create an Instance of this type when testing the script in Roblox Studio.
+			CanView						= "no"	-- Can the camera focus on this instance?
+		},
+		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
+			UseCmnList_1				= "SoundEffect",	-- Common properties that this class shares with others.
+			-- UseCmnList_2				= "WetDrySound",
+			HighGain					= "number",
+			LowGain						= "number",
+			MidGain						= "number"
 		}
 	},
 	["Fire"]							= {
@@ -656,6 +734,20 @@ env.XRecreator.ClassData				= {
 			SecondaryColor				= "Color3",
 			Size						= "number",
 			TimeScale					= "number"
+		}
+	},
+	["FlangeSoundEffect"]				= {
+		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
+			Icon						= "🔊",	-- Emoji used to represent this instance when it's unselected.
+			CreateTest					= true,	-- Create an Instance of this type when testing the script in Roblox Studio.
+			CanView						= "no"	-- Can the camera focus on this instance?
+		},
+		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
+			UseCmnList_1				= "SoundEffect",	-- Common properties that this class shares with others.
+			-- UseCmnList_2				= "WetDrySound",
+			Depth						= "number",		-- These are the same properties as ChorusSoundEffect! Consider creating a "common list" of these.
+			Mix							= "number",
+			Rate						= "number"
 		}
 	},
 	["Folder"]							= {	-- Folders don't have any properties other than standard Instance ones.
@@ -1005,6 +1097,18 @@ env.XRecreator.ClassData				= {
 			ZOffset						= "number"
 		}
 	},
+	["PitchShiftSoundEffect"]			= {
+		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
+			Icon						= "🔊",	-- Emoji used to represent this instance when it's unselected.
+			CreateTest					= true,	-- Create an Instance of this type when testing the script in Roblox Studio.
+			CanView						= "no"	-- Can the camera focus on this instance?
+		},
+		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
+			UseCmnList_1				= "SoundEffect",	-- Common properties that this class shares with others.
+			-- UseCmnList_2				= "WetDrySound",
+			Octave						= "number"
+		}
+	},
 	["PlaneConstraint"]					= {
 		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
 			Icon						= "🧷",	-- Emoji used to represent this instance when it's unselected.
@@ -1076,6 +1180,20 @@ env.XRecreator.ClassData				= {
 		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
 			UseCmnList_1				= "SlidingBallConstraint",	-- Common properties that this class shares with others.
 			UseCmnList_2				= "Constraint"
+		}
+	},
+	["ReverbSoundEffect"]				= {
+		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
+			Icon						= "🔊",	-- Emoji used to represent this instance when it's unselected.
+			CreateTest					= true,	-- Create an Instance of this type when testing the script in Roblox Studio.
+			CanView						= "no"	-- Can the camera focus on this instance?
+		},
+		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
+			UseCmnList_1				= "SoundEffect",	-- Common properties that this class shares with others.
+			UseCmnList_2				= "WetDrySound",
+			DecayTime					= "number",
+			Density						= "number",
+			Diffusion					= "number"
 		}
 	},
 	["RodConstraint"]				= {
@@ -1328,6 +1446,7 @@ env.XRecreator.ClassData				= {
 		},
 		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
 			UseCmnList_1				= "PBRMapSet",	-- Common properties that this class shares with others.
+			Color						= "Color3",
 			AlphaMode					= "EnumItem",
 		}
 	},
@@ -1463,6 +1582,20 @@ env.XRecreator.ClassData				= {
 			TextureMode					= "EnumItem",
 			Transparency				= "number",
 			WidthScale					= "NumberSequence"
+		}
+	},
+	["TremoloSoundEffect"]				= {
+		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
+			Icon						= "🔊",	-- Emoji used to represent this instance when it's unselected.
+			CreateTest					= true,	-- Create an Instance of this type when testing the script in Roblox Studio.
+			CanView						= "no"	-- Can the camera focus on this instance?
+		},
+		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
+			UseCmnList_1				= "SoundEffect",	-- Common properties that this class shares with others.
+			-- UseCmnList_2				= "WetDrySound",
+			Depth						= "number",
+			Duty						= "number",
+			Frequency					= "number"
 		}
 	},
 	["TrussPart"]					= {
