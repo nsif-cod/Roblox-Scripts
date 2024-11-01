@@ -1,6 +1,6 @@
 --[[
 	ROYALE HIGH ACCESSORY PRESERVER, WRITTEN IN 2024	|
-	LAST UPDATED ON SEPTEMBER 14TH, 2024				|
+	LAST UPDATED ON NOVEMBER 1ST, 2024					|
 	____________________________________________________/
 	PURPOSE
 	Royale High has a lot of beautiful, well-designed clothes, but with more recent sets (~2024), it has
@@ -220,7 +220,7 @@ local Conn_RHClose1 : RBXScriptConnection	= nil	-- Closes the confirmation dialo
 local Conn_RHClose2 : RBXScriptConnection	= nil	-- Same as Conn_RHClose1
 local Conn_RHYesBtn : RBXScriptConnection	= nil	-- Saves everything in the CLothing Captures folder to JSON files.
 local Conn_CloseBtn : RBXScriptConnection	= nil	-- Disconnects all event connections, destroys the GUI, and hopefully ends this script.
-local Conn_SidebarVis : RBXScriptConnection	= nil	-- Toggle GUI visibility toggle detection event.
+-- local Conn_SidebarVis : RBXScriptConnection	= nil	-- Toggle GUI visibility toggle detection event.
 local Conn_CharAdded : RBXScriptConnection	= nil	-- This player's CharacterAdded event. This ends the script, as it breaks GUI references.
 local Conn_CharRemove : RBXScriptConnection	= nil	-- This player's CharacterRemoving event, which also causes a self-destruct.
 
@@ -847,6 +847,7 @@ local function Shutdown(_playAnim : boolean)
 	DisconnectEvent(Conn_RHClose2)
 	DisconnectEvent(Conn_RHYesBtn)
 	DisconnectEvent(Conn_CloseBtn)
+	-- DisconnectEvent(Conn_SidebarVis)
 	
 	DisconnectEvent(Conn_FurniAdd)
 	DisconnectEvent(Conn_FurniRem)
@@ -1071,26 +1072,35 @@ local function Request1ModelValidation()
 					end
 				end
 				
-				-- Next, iterate through this item's variation "categories" and get their information by using some "string magic".
-				for _,category in GUI_Base.DynamicToggleVariants.ToggleCycleFrame:GetChildren() do
+				-- Create and sort a list of all frames in the variation list section of the customization GUI.
+				local temp_varUIList = {}
+				for _,category : Instance in GUI_Base.DynamicToggleVariants.ToggleCycleFrame:GetChildren() do
 					if category:IsA("Frame") then
-						local temp_newEntry	= {
-							CategoryName	= category.Name:sub(7),	-- Remove the first 6 letters (which are usually "Cycle ").
-							VarName			= "Unknown",
-							VarNumber		= -1
-						}
-						
-						-- Unfortunately, Royale High crams both the current variation and its name into the same string, so the cryptic-looking
-						-- "code" below figures out where the left-most number and name are, and slices the original string up, storing the info.
-						local VariationStr:string	= category.CurrentCycleItem.Text	-- This includes both the number and name ("(1/5) Angel").
-						local slashPos				= VariationStr:find("/",1,true)		-- The slash separates the current and total variations.
-						local _,rightParenLoc		= VariationStr:find(") ",1,true)	-- The right parentheses and space are the name's left bound.
-						
-						temp_newEntry.VarNumber		= tonumber(VariationStr:sub(2,slashPos-1))
-						temp_newEntry.VarName		= VariationStr:sub(rightParenLoc+1)
-						
-						table.insert(VariationInfo, category.LayoutOrder, temp_newEntry)	-- Insert this entry at its position in RH's list.
+						table.insert(temp_varUIList, category)
 					end
+				end
+				table.sort(temp_varUIList,function(_instA : Frame,_instB : Frame)	-- Sort the list in ascending "order".
+					return _instA.LayoutOrder > _instB.LayoutOrder
+				end)
+				
+				-- Next, iterate through this item's variation "categories" and get their information by using some "string magic".
+				for num,category in temp_varUIList do
+					local temp_newEntry	= {
+						CategoryName	= category.Name:sub(7),	-- Remove the first 6 letters (which are usually "Cycle ").
+						VarName			= "Unknown",
+						VarNumber		= 0
+					}
+					
+					-- Unfortunately, Royale High crams both the current variation and its name into the same string, so the cryptic-looking
+					-- "code" below figures out where the left-most number and name are, and slices the original string up, storing the info.
+					local VariationStr:string	= category.CurrentCycleItem.Text	-- This includes both the number and name ("(1/5) Angel").
+					local slashPos				= VariationStr:find("/",1,true)		-- The slash separates the current and total variations.
+					local _,rightParenLoc		= VariationStr:find(") ",1,true)	-- The right parentheses and space are the name's left bound.
+					
+					temp_newEntry.VarNumber		= tonumber(VariationStr:sub(2,slashPos-1))
+					temp_newEntry.VarName		= VariationStr:sub(rightParenLoc+1)
+					
+					table.insert(VariationInfo, temp_newEntry)	-- Insert this entry at its position in RH's list.
 				end
 				
 				-- Finally, assemble this Model's final name, starting with its given name and toggle number.
@@ -1145,7 +1155,7 @@ local function Request1ModelValidation()
 					UpdateButton("save", true)
 					UpdateButton("check", true)
 				else
-					message.Text	= "You've already saved this specific toggle and variant combination." ..
+					message.Text	= "You've already saved this specific toggle/variation combination." ..
 						"Please try another one then CHECK again."
 				end
 			else
