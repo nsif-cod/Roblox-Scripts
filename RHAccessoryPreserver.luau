@@ -1080,7 +1080,7 @@ local function Request1ModelValidation()
 					end
 				end
 				table.sort(temp_varUIList,function(_instA : Frame,_instB : Frame)	-- Sort the list in ascending "order".
-					return _instA.LayoutOrder > _instB.LayoutOrder
+					return _instA.LayoutOrder < _instB.LayoutOrder	-- If A has a lower order, it's placed before B.
 				end)
 				
 				-- Next, iterate through this item's variation "categories" and get their information by using some "string magic".
