@@ -1,6 +1,6 @@
 --[[
-	XANE'S MODEL RECREATOR (SCRIPT/DECONSTRUCTOR PHASE) V3, WRITTEN IN 2024
-	LAST UPDATED ON AUGUST 14TH, 2024
+	XANE'S MODEL RECREATOR (SCRIPT/DECONSTRUCTOR PHASE) V4, WRITTEN IN 2024
+	LAST UPDATED ON JANUARY 11TH, 2025
 	
 	A personal script of mine, released to the public to enable anyone to save models (and other supported instances)
 	from any Roblox experience (as long as your Roblox app doesn't crash in the process of loading it)! Execute this
@@ -18,6 +18,10 @@
 	select anything that you want, give a name to this export using the text box at the bottom-right corner, then
 	with one click/tap of the save button, your selection will be transformed into JSON files in your executor's
 	"workspace" folder.
+	
+	As of January 11th, 2025, this script can also save terrain, albeit in a rather small area around your avatar.
+	You can save multiple blocks of terrain to files; Just make sure to enter a "filename" in the text box before
+	tapping/clicking the terrain saving button!
 ]]--
 
 if not game:IsLoaded() then game.Loaded:Wait() end
@@ -36,7 +40,7 @@ local PlayerGui			= Players.LocalPlayer:WaitForChild("PlayerGui")
 local CoreGui			= game:GetService("CoreGui")
 
 -- STATIC DATA
-local DefaultMessage	= "Welcome to Xane's Model Recreator v3, the ultimate instance capturer! Please choose a container above, select which instances you want, name it, then save!"
+local DefaultMessage	= "Welcome to Xane's Model Recreator v4, the ultimate instance capturer! Please choose a container above, select which instances you want, name it, then save!"
 
 --- This script uses Xane's Recreator API! The boilerplate code below will load it from one of its locations online, trying each in order.
 local RecreatorAPIMirrors = {
@@ -94,6 +98,20 @@ type VisibleListEntry		= {
 	Checkbox			: TextButton,			-- The toggle-box found at the left side of this row/entry.
 	SelectBox			: SelectionBox,			-- This Instance's SelectionBox, which is created and destroyed as needed upon its selection.
 	IsSelectAllRow		: boolean				-- If TRUE, selecting this row will deselect all instances within the selected container.
+}
+
+type SavedTerrainStruct		= {
+	Data					: {string},	-- The occupancy/materials of each "Z slice/row" of this save, in ascending Z-Y-X order.
+	Position				: {number},	-- Coordinates of the saved region's lower-left(?) corner.
+	Size					: {number},
+	Properties				: {			-- A dictionary entry full of miscellaneous Terrain properties.
+		MaterialColors		: {},		-- The color of each terrain material, in ascending Enum.Material order.
+		WaterColor			: {number},	-- Color of all water in this realm/place.
+		WaterReflectance	: number,
+		WaterTransparency	: number,
+		WaterWaveSize		: number,
+		WaterWaveSpeed		: number
+	}
 }
 
 type ClassDefinition		= {
@@ -652,30 +670,30 @@ nextPageBtnSizeConstraint.MaxTextSize = 24
 nextPageBtnSizeConstraint.MinTextSize = 6
 nextPageBtnSizeConstraint.Parent = nextPageButton
 
-local PoseCharCheckbox = Instance.new("TextButton")
-PoseCharCheckbox.Font = Enum.Font.RobotoCondensed
-PoseCharCheckbox.Text = "💃🏼Ignore characters"
-PoseCharCheckbox.TextColor3 = Color3.new(1, 1, 1)
-PoseCharCheckbox.TextScaled = true
-PoseCharCheckbox.TextSize = 14
-PoseCharCheckbox.TextStrokeTransparency = 0
-PoseCharCheckbox.TextWrapped = true
-PoseCharCheckbox.Modal = true
-PoseCharCheckbox.AutomaticSize = Enum.AutomaticSize.X
-PoseCharCheckbox.BackgroundColor3 = Color3.new(0.596078, 0.921569, 0.921569)
-PoseCharCheckbox.BorderColor3 = Color3.new(0, 0, 0)
-PoseCharCheckbox.BorderSizePixel = 0
-PoseCharCheckbox.LayoutOrder = 3
-PoseCharCheckbox.Size = UDim2.fromScale(0.2,1)
-PoseCharCheckbox.SizeConstraint = Enum.SizeConstraint.RelativeXY
-PoseCharCheckbox.Visible = true
-PoseCharCheckbox.Name = "CBox_PoseChars"
-PoseCharCheckbox.Parent = bot_bar
+local terrainSaveButton = Instance.new("TextButton")
+terrainSaveButton.Font = Enum.Font.RobotoCondensed
+terrainSaveButton.Text = "🏔️ Capture Near Terrain…"
+terrainSaveButton.TextColor3 = Color3.new(1, 1, 1)
+terrainSaveButton.TextScaled = true
+terrainSaveButton.TextSize = 14
+terrainSaveButton.TextStrokeTransparency = 0
+terrainSaveButton.TextWrapped = true
+terrainSaveButton.Modal = true
+terrainSaveButton.AutomaticSize = Enum.AutomaticSize.X
+terrainSaveButton.BackgroundColor3 = Color3.new(0.596078, 0.921569, 0.921569)
+terrainSaveButton.BorderColor3 = Color3.new(0, 0, 0)
+terrainSaveButton.BorderSizePixel = 0
+terrainSaveButton.LayoutOrder = 3
+terrainSaveButton.Size = UDim2.fromScale(0.2,1)
+terrainSaveButton.SizeConstraint = Enum.SizeConstraint.RelativeXY
+terrainSaveButton.Visible = true
+terrainSaveButton.Name = "SaveTerrain"
+terrainSaveButton.Parent = bot_bar
 
-local pose_chars_size_constraint = Instance.new("UITextSizeConstraint")
-pose_chars_size_constraint.MaxTextSize = 24
-pose_chars_size_constraint.MinTextSize = 6
-pose_chars_size_constraint.Parent = PoseCharCheckbox
+local terrain_size_constraint = Instance.new("UITextSizeConstraint")
+terrain_size_constraint.MaxTextSize = 24
+terrain_size_constraint.MinTextSize = 6
+terrain_size_constraint.Parent = terrainSaveButton
 
 -- JSON MODEL NAME ENTRY FIELD/TEXTBOX
 local filename_box = Instance.new("TextBox")
@@ -835,6 +853,57 @@ local BtnColor_Disabled		= Color3.fromRGB(126,128,130)	-- Used until a valid mod
 
 local RowOpacityNormal		= 0.875
 local RowOpacitySelected	= 0.75
+
+local TerrainSaveSize		= Vector3.new(204,100,204)		-- Distance to one corner of a captured terrain region.
+
+-- Create an invisible block with a SelectionBox around it. This will mark areas that terrain has been saved within.
+local TerrainMarkerTemplate	= Instance.new("Part")
+TerrainMarkerTemplate.Size	= TerrainSaveSize
+TerrainMarkerTemplate.Transparency = 1
+TerrainMarkerTemplate.Name	= "SavedTerrainRegion"
+TerrainMarkerTemplate.Anchored = true
+TerrainMarkerTemplate.CastShadow = false
+TerrainMarkerTemplate.CanCollide = false
+TerrainMarkerTemplate.CanQuery = false
+TerrainMarkerTemplate.CanTouch = false
+TerrainMarkerTemplate:SetAttribute("XaneProtectedDoNotShowInRecreatorGui",true)	-- Hide this instance from the Recreator itself.
+
+local TerrainBox			= Instance.new("SelectionBox")
+TerrainBox.Color3			= Color3.new(1,0.325,0.0625)
+TerrainBox.Transparency		= 0.125
+TerrainBox.SurfaceColor3	= Color3.new(1,0.425,0.125)
+TerrainBox.SurfaceTransparency = 0.75
+TerrainBox:SetAttribute("XaneProtectedDoNotShowInRecreatorGui",true)			-- Hide this instance from the Recreator itself.
+TerrainBox.Parent			= TerrainMarkerTemplate
+
+TerrainMarkerTemplate.Parent = script
+
+-- A filtered list of terrain-specific materials that use terrain colors, used to index materials as numerical indices in saves.
+local TerrainMaterialList	=  {
+	"WoodPlanks",
+	"Slate",
+	"Concrete",
+	"Brick",
+	"Cobblestone",
+	"Rock",
+	"Sandstone",
+	"Basalt",
+	"CrackedLava",
+	"Limestone",
+	"Pavement",
+	"CorrodedMetal",
+	"Grass",
+	"LeafyGrass",
+	"Sand",
+	"Snow",
+	"Mud",
+	"Ground",
+	"Asphalt",
+	"Salt",
+	"Ice",
+	"Glacier"
+}
+local SavedTerrainBoxes		= {}	-- List of spawned terrain box clones, removed when this script stops.
 
 -- An array of dictionary entries which keeps all of the events and references needed by each instance shown in the main UI list.
 -- As creating too many rows will lag the client when the list updates (scrolling, generating, etc), this array should be limited to
@@ -1263,6 +1332,120 @@ filename_box.FocusLost:Connect(function()
 	end
 end)
 
+terrainSaveButton.MouseButton1Click:Connect(function()
+	if not IsBusy and LastSafeName:len() > 0 then
+		IsBusy = true
+		--[[
+			Find the first open file to write this terrain data to. Terrain is written to files named
+			[saveName]_Terrain[number].json, which can be imported into Xane's Asset Importer just like header JSON files.
+			Due to Roblox's low limits for how much terrain can be scanned at a time, this lets the user capture multiple
+			blocks full of terrain, which will be required for the average Roblox place/realm that uses terrain.
+		]]--
+		message.Text = 'Finding an open "slot" for this terrain capture. (If this never finishes, sorry... Please rejoin.)'
+		local temp_tSaveId = 1
+		local temp_tFilename : string? = nil
+		while not temp_tFilename do
+			local success, errormsg = pcall(function()
+				readfile(LastSafeName .. "_Terrain" .. tostring(temp_tSaveId) .. ".json")
+			end)
+			if not success then	-- If an error occurred, the file didn't exist, so it's ours (hopefully)!
+				temp_tFilename = LastSafeName .. "_Terrain" .. tostring(temp_tSaveId) .. ".json"
+				break
+			else
+				temp_tSaveId += 1
+				if temp_tSaveId % 10 == 0 then task.wait() end	-- Wait a bit every on every tenth check, to avoid freezing the app.
+			end
+		end
+		
+		local temp_tFileContents : SavedTerrainStruct	= {
+			Data										= {},
+			Position									= table.create(3, 0),
+			Size										= table.create(3, 0),
+			Properties									= {	-- Annoyingly, the "decoration" and "grass length" properties are locked.
+				MaterialColors							= {},
+				WaterColor								= workspace.Terrain.WaterColor,
+				WaterReflectance						= workspace.Terrain.WaterReflectance,
+				WaterTransparency						= workspace.Terrain.WaterTransparency,
+				WaterWaveSize							= workspace.Terrain.WaterWaveSize,
+				WaterWaveSpeed							= workspace.Terrain.WaterWaveSpeed
+			}
+		}
+		for _,material in TerrainMaterialList do	-- Grab all of the terrain material colors using the intended function.
+			table.insert(
+				temp_tFileContents.Properties.MaterialColors,
+				Recreator.EncodeValueForJSON(workspace.Terrain:GetMaterialColor(Enum.Material[material]), "Color3")
+			)
+		end
+		
+		-- Finally, before we begin to capture the terrain itself, let's set up its region and add that to our file.
+		local temp_tCenter:Vector3 = Players.LocalPlayer.Character.Humanoid.RootPart.Position
+		local temp_tR3 = Region3.new(temp_tCenter-TerrainSaveSize, temp_tCenter+TerrainSaveSize):ExpandToGrid(4)
+		local temp_tGrabMaterials = nil	-- A 3D array of terrain cells' material EnumItems.
+		local temp_tGrabOccupancy = nil	-- Another 3D array, which stores how much of each cell is occupied by terrain.
+		temp_tFileContents.Position = temp_tCenter-TerrainSaveSize
+		
+		local success, errormsg = pcall(function()
+			message.Text = "Attempting to capture terrain, please wait! Your app may freeze for a few seconds while this happens."
+			wait()
+			workspace.Terrain:ReadVoxels(temp_tR3, 4)
+		end)
+		
+		if success then
+			message.Text = "Gotcha! Now squeezing terrain occupancy/material data into smaller arrays..."
+			temp_tFileContents.Size = Recreator.EncodeValueForJSON(temp_tGrabOccupancy.Size, "Vector3")
+			temp_tGrabMaterials["Size"] = nil; temp_tGrabOccupancy["Size"] = nil;	-- Remove the "size" values to avoid issues.
+			
+			--[[
+				This code block may seem confusing, but it's just iterating through each sub-array in order, concatenating each
+				value pair ([occupancy]![material]) into a comma-separated string list, Each "slice" is checked in order, turned
+				into a long string, which is added to a basic array, "Data", in the saved JSON file.
+			]]--
+			for x = 1, temp_tFileContents.Size[1] do
+				for y = 1, temp_tFileContents.Size[2] do
+					local temp_zSlice = ""	-- At the start of each third-layer array, make a new string for this line's data.
+					for z = 1, temp_tFileContents.Size[3] do
+						if z > 1 then temp_zSlice ..= "," end	-- Add a comma after every item after the first.
+						temp_zSlice ..= tostring(temp_tGrabOccupancy[x][y][z]) .. "!" .. temp_tGrabMaterials[x][y][z].Name
+					end
+					table.insert(temp_tFileContents.Data, temp_zSlice)	-- Add this slice's contents to an item, then move to the next.
+					task.wait()
+				end
+			end
+			
+			table.clear(temp_tGrabMaterials); table.clear(temp_tGrabOccupancy);
+			
+			-- Everything should be in the dictionary entry now, so let's turn it into a JSON file!
+			local temp_tJSONVer:string? = nil
+			local success1, errormsg1 = pcall(function()
+				temp_tJSONVer = game:GetService("HttpService"):JSONEncode(temp_tFileContents)
+			end)
+			
+			if success1 then
+				local success2, errormsg2 = pcall(function()
+					writefile(temp_tFilename, temp_tJSONVer)
+				end)
+				
+				if success2 then
+					message.Text =
+						"Done! The terrain around you was saved to " .. temp_tFilename .. "! It's shown as a box around you now."
+					
+					local temp_newBox = TerrainMarkerTemplate:Clone()
+					temp_newBox.Name ..= "_" .. temp_tSaveId
+					temp_newBox.CFrame = temp_tR3.CFrame
+					temp_newBox.Parent = workspace.CurrentCamera
+					table.insert(SavedTerrainBoxes, temp_newBox)	-- Keep track of this box, so it can be removed later.
+				end
+			else
+				message.Text = "For some reason, this terrain capture couldn't be converted to JSON! Reason: " .. errormsg1 or "None"
+			end
+		else
+			message.Text = "Unfortunately, terrain couldn't be saved here. Reason: " .. errormsg or "No error message given."
+		end
+		
+		IsBusy = false
+	end
+end)
+
 -- Unfreezes frozen char. parts, shows the GUI, and unsets the "busy" flag, restoring the ability to select instances again.
 -- If _success is set, this function also deselects everything and redraws the list.
 local function PostSaveCleanup(_success)
@@ -1304,7 +1487,9 @@ close_button.MouseButton1Click:Connect(function()
 		Recreator.ActivateAPI(false)
 		table.clear(ListData)
 		xane_mdlrecreator_gui:Destroy()
-		print("Xane's Model Recreator has been closed. Thank you for using this awesome script!")
+		for _,box : SelectionBox in SavedTerrainBoxes do box:Destroy() end
+		table.clear(SavedTerrainBoxes)
+		print("Xane's Model Recreator has been closed. Thank you for using this awesome script,", Players.LocalPlayer.DisplayName)
 		script:Destroy()
 	end
 end)
