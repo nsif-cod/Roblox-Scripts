@@ -891,7 +891,6 @@ local TerrainMaterialList	=  {
 	"CrackedLava",
 	"Limestone",
 	"Pavement",
-	"CorrodedMetal",
 	"Grass",
 	"LeafyGrass",
 	"Sand",
@@ -1402,18 +1401,28 @@ terrainSaveButton.MouseButton1Click:Connect(function()
 		
 		if success then
 			message.Text = "Gotcha! Now squeezing terrain occupancy/material data into smaller arrays..."
-			temp_tFileContents.Size = Recreator.EncodeValueForJSON(temp_tGrabOccupancy.Size, "Vector3")
+			temp_tFileContents.Size = Recreator.EncodeValueForJSON(temp_tGrabOccupancy["Size"], "Vector3")
+			task.wait()
 			temp_tGrabMaterials["Size"] = nil; temp_tGrabOccupancy["Size"] = nil;	-- Remove the "size" values to avoid issues.
+			local temp_size = Vector3.new(102,50,102)
+			if
+				temp_tFileContents.Size and
+				temp_tFileContents.Size[1] and
+				temp_tFileContents.Size[2] and
+				temp_tFileContents.Size[3]
+			then
+				temp_size = Vector3.new(temp_tFileContents.Size[1],temp_tFileContents.Size[2],temp_tFileContents.Size[3])
+			end
 			
 			--[[
 				This code block may seem confusing, but it's just iterating through each sub-array in order, concatenating each
 				value pair ([occupancy]![material]) into a comma-separated string list, Each "slice" is checked in order, turned
 				into a long string, which is added to a basic array, "Data", in the saved JSON file.
 			]]--
-			for x = 1, temp_tFileContents.Size[1] do
-				for y = 1, temp_tFileContents.Size[2] do
+			for x = 1, temp_size.X do
+				for y = 1, temp_size.Y do
 					local temp_zSlice = ""	-- At the start of each third-layer array, make a new string for this line's data.
-					for z = 1, temp_tFileContents.Size[3] do
+					for z = 1, temp_size.Z do
 						if z > 1 then temp_zSlice ..= "," end	-- Add a comma after every item after the first.
 						temp_zSlice ..= tostring(temp_tGrabOccupancy[x][y][z]) .. "!" .. temp_tGrabMaterials[x][y][z].Name
 					end
