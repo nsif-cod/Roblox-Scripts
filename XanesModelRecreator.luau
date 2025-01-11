@@ -1371,10 +1371,20 @@ terrainSaveButton.MouseButton1Click:Connect(function()
 			}
 		}
 		for _,material in TerrainMaterialList do	-- Grab all of the terrain material colors using the intended function.
-			table.insert(
-				temp_tFileContents.Properties.MaterialColors,
-				Recreator.EncodeValueForJSON(workspace.Terrain:GetMaterialColor(Enum.Material[material]), "Color3")
-			)
+			
+			local success, errormsg = pcall(function()
+				table.insert(
+					temp_tFileContents.Properties.MaterialColors,
+					Recreator.EncodeValueForJSON(workspace.Terrain:GetMaterialColor(Enum.Material[material]), "Color3")
+				)
+			end)
+			
+			if success then print("Got", material, "terrain color successfully!")
+			else
+				table.insert(temp_tFileContents.Properties.MaterialColors, {0,0,0})	-- Save pure black as a placeholder.
+				warn("Failed to get " .. material or "UNKNOWN" .. "'s terrain color!")
+				pcall(function() print("Enum:", Enum.Material[material]) end)
+			end
 		end
 		
 		-- Finally, before we begin to capture the terrain itself, let's set up its region and add that to our file.

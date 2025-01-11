@@ -1,6 +1,6 @@
 --[[
 	XANE'S RECREATOR API, WRITTEN IN 2024
-	LAST UPDATED ON AUGUST 30TH, 2024
+	LAST UPDATED ON JANUARY 11TH, 2025
 	
 	A script that adds common functions to any Roblox script intended for saving
 	most instances to JSON files, which can be used with Xane's Asset Importer, a
