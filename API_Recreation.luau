@@ -106,6 +106,8 @@ type ModelRecreatorStruct	= {
 	IsInstanceAllowed : (_instance : Instance) -> (boolean),			-- Checks if an Instance's type is safe to save. (Model Recreator v3)
 	Load		: (_header:string,_pieces:{string},_dest:Instance?) -> (XRecreatorImportResult?),	-- Import previously saved JSON instances.
 	LoadFile	: (_saveName:string,_dest:Instance?) -> (XRecreatorImportResult?),	-- Loads from a JSON capture set, passing to Load().
+	EncodeValueForJSON : (_value : any, _type : string) -> (any),		-- Converts Roblox types to basic arrays compatible with JSON.
+	DecodeValueFromJSON : (_value : any, _type : string) -> (any),		-- Attempts to turn a converted value back into a specific type.
 
 	-- VARIABLES
 	Reserved	: boolean,												-- Set to TRUE after a script calls ActivateAPI().
@@ -2258,6 +2260,10 @@ local function GetValue(_value : any, _type : string)
 		return Faces.new(_value)	-- _value supposedly is a list of NormalId Enum values, which willl hopefully work here.
 	end
 end
+-- Alias for the internal function above, exposed to any scripts accessing the Recreation API.
+function Recreator.DecodeValueFromJSON(_value : any, _type : string)
+	return GetValue(_value, _type)
+end
 
 -- StoreValue (takes any and string, returns varied content)
 -- Takes an arbitrary value and tries to convert it to a value which could be stored in a JSON dictionary. For
@@ -2319,6 +2325,10 @@ local function StoreValue(_value : any, _type : string)
 		if __value.Front then table.insert(FaceIdList, 5) end
 		return FaceIdList
 	end
+end
+-- Alias for the internal function above, exposed to any scripts accessing the Recreation API.
+function Recreator.EncodeValueForJSON(_value : any, _type : string)
+	return StoreValue(_value, _type)
 end
 
 env.XRecreator.PageLength		= env.PageLength or 100		-- How many instances should be listed at a time.

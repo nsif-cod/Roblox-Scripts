@@ -139,6 +139,8 @@ type ModelRecreatorStruct	= {
 	IsInstanceAllowed : (_instance : Instance) -> (boolean),			-- Checks if an Instance's type is safe to save. (Model Recreator v3)
 	Load		: (_header:any,_pieces:{any},_cfg:XRecreatorLoadConfig) -> (XRecreatorImportResult?),	-- Import saved JSON instances.
 	LoadFile	: (_saveName:string,_cfg:XRecreatorLoadConfig) -> (XRecreatorImportResult?),	-- Loads from a JSON capture set, using Load().
+	EncodeValueForJSON : (_value : any, _type : string) -> (any),		-- Converts Roblox types to basic arrays compatible with JSON.
+	DecodeValueFromJSON : (_value : any, _type : string) -> (any),		-- Attempts to turn a converted value back into a specific type.
 	
 	-- VARIABLES
 	Reserved	: boolean,												-- Set to TRUE after a script calls ActivateAPI().
