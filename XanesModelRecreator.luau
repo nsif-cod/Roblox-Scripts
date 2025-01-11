@@ -1408,48 +1408,65 @@ terrainSaveButton.MouseButton1Click:Connect(function()
 				value pair ([occupancy]![material]) into a comma-separated string list, Each "slice" is checked in order, turned
 				into a long string, which is added to a basic array, "Data", in the saved JSON file.
 			]]--
-			for x = 1, 102 do
-				for y = 1, 50 do
-					local temp_zSlice = ""	-- At the start of each third-layer array, make a new string for this line's data.
-					for z = 1, 102 do
-						if z > 1 then temp_zSlice ..= "," end	-- Add a comma after every item after the first.
-						temp_zSlice ..= tostring(temp_tGrabOccupancy[x][y][z]) .. "!" .. temp_tGrabMaterials[x][y][z].Name
+			local success3, errormsg3 = pcall(function()
+				for x = 1, 102 do
+					for y = 1, 50 do
+						local temp_zSlice = ""	-- At the start of each third-layer array, make a new string for this line's data.
+						for z = 1, 102 do
+							if z > 1 then temp_zSlice ..= "," end	-- Add a comma after every item after the first.
+							local _,error2 = pcall(function()
+								print("Details before failure:")
+								print("zSlice contents:", temp_zSlice)
+								print("Overall array:", tostring(temp_tGrabOccupancy))
+								print("X subarray:", tostring(temp_tGrabOccupancy[x]))
+								print("Y subarray:", tostring(temp_tGrabOccupancy[x][y]))
+								print("Z sub-value:", tostring(temp_tGrabOccupancy[x][y][z]))
+							end)
+							temp_zSlice ..= tostring(temp_tGrabOccupancy[x][y][z]) .. "!" .. temp_tGrabMaterials[x][y][z].Name
+						end
+						table.insert(temp_tFileContents.Data, temp_zSlice)	-- Add this slice's contents to an item, then move to the next.
+						task.wait()
 					end
-					table.insert(temp_tFileContents.Data, temp_zSlice)	-- Add this slice's contents to an item, then move to the next.
-					task.wait()
 				end
-			end
+			end)
 			
 			table.clear(temp_tGrabMaterials); table.clear(temp_tGrabOccupancy);
 			
-			-- Everything should be in the dictionary entry now, so let's turn it into a JSON file!
-			local temp_tJSONVer:string? = nil
-			local success1, errormsg1 = pcall(function()
-				temp_tJSONVer = game:GetService("HttpService"):JSONEncode(temp_tFileContents)
-			end)
-			
-			if success1 then
-				local success2, errormsg2 = pcall(function()
-					writefile(temp_tFilename, temp_tJSONVer)
+			if success3 then
+				-- Everything should be in the dictionary entry now, so let's turn it into a JSON file!
+				local temp_tJSONVer:string? = nil
+				local success1, errormsg1 = pcall(function()
+					temp_tJSONVer = game:GetService("HttpService"):JSONEncode(temp_tFileContents)
 				end)
 				
-				if success2 then
-					message.Text =
-						"Done! The terrain around you was saved to " .. temp_tFilename .. "! It's shown as a box around you now."
+				if success1 then
+					local success2, errormsg2 = pcall(function()
+						writefile(temp_tFilename, temp_tJSONVer)
+					end)
 					
-					local temp_newBox = TerrainMarkerTemplate:Clone()
-					temp_newBox.Name ..= "_" .. temp_tSaveId
-					temp_newBox.CFrame = temp_tR3.CFrame
-					temp_newBox.Parent = workspace.CurrentCamera
-					table.insert(SavedTerrainBoxes, temp_newBox)	-- Keep track of this box, so it can be removed later.
+					if success2 then
+						message.Text =
+							"Done! The terrain around you was saved to " .. temp_tFilename .. "! It's shown as a box around you now."
+						
+						local temp_newBox = TerrainMarkerTemplate:Clone()
+						temp_newBox.Name ..= "_" .. temp_tSaveId
+						temp_newBox.CFrame = temp_tR3.CFrame
+						temp_newBox.Parent = workspace.CurrentCamera
+						table.insert(SavedTerrainBoxes, temp_newBox)	-- Keep track of this box, so it can be removed later.
+					end
+				else
+					message.Text = "For some reason, this terrain capture couldn't be converted to JSON! Reason: " .. errormsg1 or "None"
 				end
 			else
-				message.Text = "For some reason, this terrain capture couldn't be converted to JSON! Reason: " .. errormsg1 or "None"
+				message.Text =
+					"Unfortunately, the terrain data couldn't be squeezed due to an error: " ..
+					errormsg3 or "No message specified."
 			end
 		else
 			message.Text = "Unfortunately, terrain couldn't be saved here. Reason: " .. errormsg or "No error message given."
 		end
 		
+		table.clear(temp_tFileContents)
 		IsBusy = false
 	end
 end)
