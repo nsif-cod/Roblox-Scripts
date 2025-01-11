@@ -1396,7 +1396,7 @@ terrainSaveButton.MouseButton1Click:Connect(function()
 		local success, errormsg = pcall(function()
 			message.Text = "Attempting to capture terrain, please wait! Your app may freeze for a few seconds while this happens."
 			wait()
-			workspace.Terrain:ReadVoxels(temp_tR3, 4)
+			temp_tGrabMaterials, temp_tGrabOccupancy = workspace.Terrain:ReadVoxels(temp_tR3, 4)
 		end)
 		
 		if success then
