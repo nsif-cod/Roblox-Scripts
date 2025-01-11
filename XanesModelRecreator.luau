@@ -1415,12 +1415,12 @@ terrainSaveButton.MouseButton1Click:Connect(function()
 						for z = 1, 102 do
 							if z > 1 then temp_zSlice ..= "," end	-- Add a comma after every item after the first.
 							local _,error2 = pcall(function()
-								print("Details before failure:")
+								print("Terrain slice entry contents now:")
 								print("zSlice contents:", temp_zSlice)
 								print("Overall array:", tostring(temp_tGrabOccupancy))
-								print("X subarray:", tostring(temp_tGrabOccupancy[x]))
-								print("Y subarray:", tostring(temp_tGrabOccupancy[x][y]))
-								print("Z sub-value:", tostring(temp_tGrabOccupancy[x][y][z]))
+								print("X:", tostring(x))
+								print("Y:", tostring(y))
+								print("Z:", tostring(z))
 							end)
 							temp_zSlice ..= tostring(temp_tGrabOccupancy[x][y][z]) .. "!" .. temp_tGrabMaterials[x][y][z].Name
 						end
