@@ -1402,7 +1402,6 @@ terrainSaveButton.MouseButton1Click:Connect(function()
 		if success then
 			message.Text = "Gotcha! Now squeezing terrain occupancy/material data into smaller arrays..."
 			temp_tFileContents.Size = Recreator.EncodeValueForJSON(Vector3.new(102,50,102), "Vector3")
-			temp_tGrabMaterials["Size"] = nil; temp_tGrabOccupancy["Size"] = nil;	-- Remove the "size" values to avoid issues.
 			
 			--[[
 				This code block may seem confusing, but it's just iterating through each sub-array in order, concatenating each
