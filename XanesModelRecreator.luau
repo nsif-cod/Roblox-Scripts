@@ -1515,7 +1515,7 @@ terrainSaveButton.MouseButton1Click:Connect(function()
 				end
 			else
 				message.Text =
-					"Unfortunately, the terrain data couldn't be squeezed due to an error. Please check the Console (F9) for info.")
+					"Unfortunately, the terrain data couldn't be squeezed due to an error. Please check the Console (F9) for info."
 			end
 		else
 			message.Text = "Unfortunately, terrain couldn't be saved here. Reason: " .. errormsg or "No error message given."
