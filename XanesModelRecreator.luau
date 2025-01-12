@@ -1388,7 +1388,7 @@ terrainSaveButton.MouseButton1Click:Connect(function()
 			Size					= table.create(3, 0),
 			Properties				= {	-- Annoyingly, the "decoration" and "grass length" properties are locked.
 				MaterialColors		= {},
-				WaterColor			= workspace.Terrain.WaterColor,
+				WaterColor			= Recreator.EncodeValueForJSON(workspace.Terrain.WaterColor, "Color3"),
 				WaterReflectance	= workspace.Terrain.WaterReflectance,
 				WaterTransparency	= workspace.Terrain.WaterTransparency,
 				WaterWaveSize		= workspace.Terrain.WaterWaveSize,
@@ -1404,11 +1404,9 @@ terrainSaveButton.MouseButton1Click:Connect(function()
 				)
 			end)
 			
-			if success then print("Got", material, "terrain color successfully!")
-			else
+			if not success then
 				table.insert(PendingTerrainFile.Properties.MaterialColors, {0,0,0})	-- Save pure black as a placeholder.
 				warn("Failed to get " .. material or "UNKNOWN" .. "'s terrain color!")
-				pcall(function() print("Enum:", Enum.Material[material]) end)
 			end
 		end
 		
@@ -1417,7 +1415,7 @@ terrainSaveButton.MouseButton1Click:Connect(function()
 		local temp_tR3 = Region3.new(temp_tCenter-TerrainSaveSize, temp_tCenter+TerrainSaveSize):ExpandToGrid(4)
 		local temp_tGrabMaterials = nil	-- A 3D array of terrain cells' material EnumItems.
 		local temp_tGrabOccupancy = nil	-- Another 3D array, which stores how much of each cell is occupied by terrain.
-		PendingTerrainFile.Position = temp_tCenter-TerrainSaveSize
+		PendingTerrainFile.Position = Recreator.EncodeValueForJSON(temp_tCenter-TerrainSaveSize, "Vector3")
 		
 		local success, errormsg = pcall(function()
 			message.Text = "Attempting to capture terrain, please wait! Your app may freeze for a few seconds while this happens."
@@ -1430,7 +1428,7 @@ terrainSaveButton.MouseButton1Click:Connect(function()
 			ToggleUI(true)
 			progress_ui.Text = "Saving terrain to a file..."
 			progress_ui.Visible = true
-			PendingTerrainFile.Size = Recreator.EncodeValueForJSON(Vector3.new(102,50,102), "Vector3")
+			PendingTerrainFile.Size = Recreator.EncodeValueForJSON(Vector3.new(102,50,102), "Vector3")	-- HARDCODED 🤮
 			
 			--[[
 				This code block may seem confusing, but it's just iterating through each sub-array in order, concatenating each

@@ -143,7 +143,9 @@ local Setting					= {
 	UseLighting					= false,
 	UseMaterials				= true,
 	AllWorkspace				= false,
-	AutoSelect					= true
+	AutoSelect					= true,
+	TerrainColors				= true,
+	TerrainAddAir				= true
 }
 
 local IsBusy					= false	-- Flag which blocks most input, mainly used when doing delayed actions like changing pages.
@@ -239,6 +241,14 @@ local CommonPropList					= {
 		CurrentAngle					= "number",
 		DesiredAngle					= "number",
 		MaxVelocity						= "number"
+	},
+	SoundEffect							= {
+		Enabled							= "boolean",
+		Priority						= "number"
+	},
+	WetDrySound							= {
+		DryLevel						= "number",
+		WetLevel						= "number"
 	},
 	SpotAndSurfaceLight					= {
 		Angle							= "number",
@@ -403,7 +413,7 @@ local ClassData							= {
 		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
 		}
 	},
-	--[[["Animator"]					= {
+	--[[["Animator"]						= {
 		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
 			Icon						= "🤺",	-- Emoji used to represent this instance when it's unselected.
 			CreateTest					= false,	-- Don't attempt to make an Instance of this type if testing the script in Roblox Studio.
@@ -492,7 +502,7 @@ local ClassData							= {
 			StudsOffsetWorldSpace		= "Vector3"
 		}
 	},
-	["BloomEffect"]						= {
+	["BloomEffect"]						= {	-- Decals' properties are reused for Textures.
 		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
 			Icon						= "🌄",	-- Emoji used to represent this instance when it's unselected.
 			CreateTest					= true,	-- Create an Instance of this type when testing the script in Roblox Studio.
@@ -505,7 +515,7 @@ local ClassData							= {
 			Threshold					= "number"
 		}
 	},
-	["BlurEffect"]						= {
+	["BlurEffect"]						= {	-- Decals' properties are reused for Textures.
 		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
 			Icon						= "🌄",	-- Emoji used to represent this instance when it's unselected.
 			CreateTest					= true,	-- Create an Instance of this type when testing the script in Roblox Studio.
@@ -580,7 +590,7 @@ local ClassData							= {
 			GroupTransparency			= "number"
 		}
 	},
-	["CFrameValue"]						= {
+	["CFrameValue"]					= {
 		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
 			Icon						= "🔢",	-- Emoji used to represent this instance when it's unselected.
 			CreateTest					= true,	-- Create an Instance of this type when testing the script in Roblox Studio.
@@ -590,7 +600,21 @@ local ClassData							= {
 			Value						= "CFrame"
 		}
 	},
-	["Color3Value"]						= {
+	["ChorusSoundEffect"]				= {
+		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
+			Icon						= "🔊",	-- Emoji used to represent this instance when it's unselected.
+			CreateTest					= true,	-- Create an Instance of this type when testing the script in Roblox Studio.
+			CanView						= "no"	-- Can the camera focus on this instance?
+		},
+		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
+			UseCmnList_1				= "SoundEffect",	-- Common properties that this class shares with others.
+			-- UseCmnList_2				= "WetDrySound",
+			Depth						= "number",		-- These are the same properties as FlangeSoundEffect! Consider creating a "common list" of these.
+			Mix							= "number",
+			Rate						= "number"
+		}
+	},
+	["Color3Value"]					= {
 		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
 			Icon						= "🔢",	-- Emoji used to represent this instance when it's unselected.
 			CreateTest					= true,	-- Create an Instance of this type when testing the script in Roblox Studio.
@@ -612,6 +636,23 @@ local ClassData							= {
 			Contrast					= "number",
 			Saturation					= "number",
 			TintColor					= "Color3"
+		}
+	},
+	["CompressorSoundEffect"]			= {
+		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
+			Icon						= "🔊",	-- Emoji used to represent this instance when it's unselected.
+			CreateTest					= true,	-- Create an Instance of this type when testing the script in Roblox Studio.
+			CanView						= "no"	-- Can the camera focus on this instance?
+		},
+		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
+			UseCmnList_1				= "SoundEffect",	-- Common properties that this class shares with others.
+			-- UseCmnList_2				= "WetDrySound",
+			Attack						= "number",
+			GainMakeup					= "number",
+			Ratio						= "number",
+			Release						= "number",
+			SideChain					= "Instance",
+			Threshold					= "number"
 		}
 	},
 	["Configuration"]					= {	-- Configuration folders don't have any properties other than standard Instance ones.
@@ -657,6 +698,18 @@ local ClassData							= {
 			NearIntensity				= "number"
 		}
 	},
+	["DistortionSoundEffect"]			= {
+		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
+			Icon						= "🔊",	-- Emoji used to represent this instance when it's unselected.
+			CreateTest					= true,	-- Create an Instance of this type when testing the script in Roblox Studio.
+			CanView						= "no"	-- Can the camera focus on this instance?
+		},
+		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
+			UseCmnList_1				= "SoundEffect",	-- Common properties that this class shares with others.
+			-- UseCmnList_2				= "WetDrySound",
+			Level						= "number"
+		}
+	},
 	["DoubleConstrainedValue"]			= {
 		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
 			Icon						= "🔢",	-- Emoji used to represent this instance when it's unselected.
@@ -666,6 +719,33 @@ local ClassData							= {
 		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
 			MaxValue					= "number",
 			MinValue					= "number"
+		}
+	},
+	["EchoSoundEffect"]					= {
+		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
+			Icon						= "🔊",	-- Emoji used to represent this instance when it's unselected.
+			CreateTest					= true,	-- Create an Instance of this type when testing the script in Roblox Studio.
+			CanView						= "no"	-- Can the camera focus on this instance?
+		},
+		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
+			UseCmnList_1				= "SoundEffect",	-- Common properties that this class shares with others.
+			UseCmnList_2				= "WetDrySound",
+			Delay						= "number",
+			Feedback					= "number"
+		}
+	},
+	["EqualizerSoundEffect"]			= {
+		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
+			Icon						= "🔊",	-- Emoji used to represent this instance when it's unselected.
+			CreateTest					= true,	-- Create an Instance of this type when testing the script in Roblox Studio.
+			CanView						= "no"	-- Can the camera focus on this instance?
+		},
+		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
+			UseCmnList_1				= "SoundEffect",	-- Common properties that this class shares with others.
+			-- UseCmnList_2				= "WetDrySound",
+			HighGain					= "number",
+			LowGain						= "number",
+			MidGain						= "number"
 		}
 	},
 	["Fire"]							= {
@@ -681,6 +761,20 @@ local ClassData							= {
 			SecondaryColor				= "Color3",
 			Size						= "number",
 			TimeScale					= "number"
+		}
+	},
+	["FlangeSoundEffect"]				= {
+		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
+			Icon						= "🔊",	-- Emoji used to represent this instance when it's unselected.
+			CreateTest					= true,	-- Create an Instance of this type when testing the script in Roblox Studio.
+			CanView						= "no"	-- Can the camera focus on this instance?
+		},
+		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
+			UseCmnList_1				= "SoundEffect",	-- Common properties that this class shares with others.
+			-- UseCmnList_2				= "WetDrySound",
+			Depth						= "number",		-- These are the same properties as ChorusSoundEffect! Consider creating a "common list" of these.
+			Mix							= "number",
+			Rate						= "number"
 		}
 	},
 	["Folder"]							= {	-- Folders don't have any properties other than standard Instance ones.
@@ -907,10 +1001,10 @@ local ClassData							= {
 		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
 			UseCmnList_1				= "BasePart",	-- Use all of the properties shared by all BasePart instances.
 			DoubleSided					= "boolean",
- 			TextureID					= "string"
-			-- MeshId						= "string",	-- Comment this line out in the plugin! MeshIds can't be set directly, only used on creation.
-			-- RenderFidelity				= "EnumItem",	-- Comment this out too...
-			-- CollisionFidelity			= "EnumItem"	-- ...and this one! (This inherits from the "TriangleMeshPart" class, also used by unions.)
+			TextureID					= "string",
+			-- MeshId					= "string",	-- Comment this line out in the plugin! MeshIds can't be set directly, only used on creation.
+			RenderFidelity				= "EnumItem",	-- Comment this out too...
+			CollisionFidelity			= "EnumItem"	-- ...and this one! (This inherits from the "TriangleMeshPart" class, also used by unions.)
 		}
 	},
 	["Model"]							= {
@@ -1030,6 +1124,18 @@ local ClassData							= {
 			ZOffset						= "number"
 		}
 	},
+	["PitchShiftSoundEffect"]			= {
+		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
+			Icon						= "🔊",	-- Emoji used to represent this instance when it's unselected.
+			CreateTest					= true,	-- Create an Instance of this type when testing the script in Roblox Studio.
+			CanView						= "no"	-- Can the camera focus on this instance?
+		},
+		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
+			UseCmnList_1				= "SoundEffect",	-- Common properties that this class shares with others.
+			-- UseCmnList_2				= "WetDrySound",
+			Octave						= "number"
+		}
+	},
 	["PlaneConstraint"]					= {
 		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
 			Icon						= "🧷",	-- Emoji used to represent this instance when it's unselected.
@@ -1101,6 +1207,20 @@ local ClassData							= {
 		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
 			UseCmnList_1				= "SlidingBallConstraint",	-- Common properties that this class shares with others.
 			UseCmnList_2				= "Constraint"
+		}
+	},
+	["ReverbSoundEffect"]				= {
+		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
+			Icon						= "🔊",	-- Emoji used to represent this instance when it's unselected.
+			CreateTest					= true,	-- Create an Instance of this type when testing the script in Roblox Studio.
+			CanView						= "no"	-- Can the camera focus on this instance?
+		},
+		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
+			UseCmnList_1				= "SoundEffect",	-- Common properties that this class shares with others.
+			UseCmnList_2				= "WetDrySound",
+			DecayTime					= "number",
+			Density						= "number",
+			Diffusion					= "number"
 		}
 	},
 	["RodConstraint"]				= {
@@ -1353,6 +1473,7 @@ local ClassData							= {
 		},
 		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
 			UseCmnList_1				= "PBRMapSet",	-- Common properties that this class shares with others.
+			Color						= "Color3",
 			AlphaMode					= "EnumItem",
 		}
 	},
@@ -1488,6 +1609,20 @@ local ClassData							= {
 			TextureMode					= "EnumItem",
 			Transparency				= "number",
 			WidthScale					= "NumberSequence"
+		}
+	},
+	["TremoloSoundEffect"]				= {
+		ListView						= {		-- Properties that customize how this instance is displayed in the list (only used in the script).
+			Icon						= "🔊",	-- Emoji used to represent this instance when it's unselected.
+			CreateTest					= true,	-- Create an Instance of this type when testing the script in Roblox Studio.
+			CanView						= "no"	-- Can the camera focus on this instance?
+		},
+		Props							= {		-- List of properties that should be saved or loaded to/from JSON for this instance.
+			UseCmnList_1				= "SoundEffect",	-- Common properties that this class shares with others.
+			-- UseCmnList_2				= "WetDrySound",
+			Depth						= "number",
+			Duty						= "number",
+			Frequency					= "number"
 		}
 	},
 	["TrussPart"]					= {
@@ -1844,6 +1979,31 @@ local ClassData							= {
 	},
 }
 
+-- A filtered list of terrain-specific materials that use terrain colors, used to index materials as numerical indices in saves.
+local TerrainMaterialList	=  {
+	"WoodPlanks",
+	"Slate",
+	"Concrete",
+	"Brick",
+	"Cobblestone",
+	"Rock",
+	"Sandstone",
+	"Basalt",
+	"CrackedLava",
+	"Limestone",
+	"Pavement",
+	"Grass",
+	"LeafyGrass",
+	"Sand",
+	"Snow",
+	"Mud",
+	"Ground",
+	"Asphalt",
+	"Salt",
+	"Ice",
+	"Glacier"
+}
+
 -- COLORSEQUENCE & NUMBERSEQUENCE FUNCTIONS (COPIED FROM MY PARSING UTILITY)
 -- Iterates through the provided array of strings and makes sure all items can be converted into numbers.
 local function ContainsOnlyNumbers(_list : {string})
@@ -2160,9 +2320,20 @@ local SettingLinkInfo	= {	-- A series of dictionary entries which determine whic
 	["AutoSelect"]		= {
 		Button			= Page3_CheckAutoSelect,
 		Text			= "Select after import"
-	}
+	},
+	["TerrainColors"]	= {
+		Button			= Page3_CheckAutoSelect,	-- TODO: Assign the terrain setting buttons to their intended buttons once added.
+		Text			= "Set colors/water properties"
+	},
+	["TerrainAddAir"]	= {
+		Button			= Page3_CheckAutoSelect,
+		Text			= "Import all (incl. air)"
+	},
 }
-local function ChangeSetting(_which : "UseLighting"|"UseMaterials"|"AllWorkspace"|"AutoSelect", _value : boolean)
+local function ChangeSetting(
+	_which : "UseLighting"|"UseMaterials"|"AllWorkspace"|"AutoSelect"|"TerrainColors"|"TerrainAddAir",
+	_value : boolean
+)
 	if IsBusy then return end	-- Don't allow this function to run during a transition.
 	
 	if SettingLinkInfo[_which] then
@@ -2238,6 +2409,7 @@ Page1_TextBox.FocusLost:Connect(function(_pressedEnter)
 		end)
 		
 		if success then
+			print("Imported header file contents:", TempDataStorage)
 			if TempDataStorage.Metadata and TempDataStorage.Metadata.Name and
 				TempDataStorage.LightingProperties and TempDataStorage.LightingProperties.ClockTime and
 				TempDataStorage.PieceInfo and TempDataStorage.PieceInfo[1] and TempDataStorage.PieceInfo[1].InsertLocation
@@ -2253,6 +2425,11 @@ Page1_TextBox.FocusLost:Connect(function(_pressedEnter)
 				Page2_TextBoxLabel.Text	= "Piece 1/" .. #Header.PieceInfo
 				UpdateStatus(true)
 				PageController:JumpTo(Page2)
+			elseif TempDataStorage.Data and TempDataStorage.Properties and TempDataStorage.Position then
+				Page1_TextBox.Text = "ACCEPTED! ✅"
+				task.wait(PageController.TweenTime)
+				-- TODO: Slide to a brand new "terrain import settings" screen here, and import after the user clicks "start".
+				ImportTerrain()
 			else
 				Page1_Error.Text = "This isn't a valid export header! Did you copy and paste text from the _header.json file?"
 				Page1_Error.Visible = true
@@ -2645,6 +2822,44 @@ function ImportAsset()
 	ChangeHistoryService:FinishRecording(currentAction, Enum.FinishRecordingOperation.Commit)	-- Finalize the changes but let the user undo them.
 	
 	task.wait(5)
+	ResetGui()
+end
+
+-- The second major function of this script, which parses through decoded terrain JSON data to rebuild it inside Roblox Studio.
+function ImportTerrain()
+	if Setting.TerrainColors then
+		for index,material in TerrainMaterialList do
+			workspace.Terrain:SetMaterialColor(Enum.Material[material], TempDataStorage.Properties.MaterialColors[index])
+		end
+	end
+	
+	--[[
+		HARDCODED VALUES 🤮 (Consider eventually supporting variable terrian capture sizes and offsets in the script!) instead
+		of assuming every save is always 102x50x102 terrain voxels big.
+	]]--
+	local terrainPos = GetValue(TempDataStorage.Position, "Vector3")
+	for x = 1, 102 do
+		for y = 1, 50 do
+			-- Split this Z slice's string into a list of occupancies and materials.
+			local temp_relevantTerrainList = TempDataStorage.Data[x*y]:split(",")
+			local temp_relevantRegions = {}	-- Pre-generate all 102 rcell locations for this slice.
+			for offset = 1, 102 do
+				temp_relevantRegions[offset] = Region3.new(
+					(terrainPos + ((Vector3.xAxis*(x-1))*4) + ((Vector3.xAxis*(y-1))*4) * ((offset-1) * 4) - Vector3.one),
+					(terrainPos + ((Vector3.xAxis*(x-1))*4) + ((Vector3.xAxis*(y-1))*4) * ((offset-1) * 4) + Vector3.one)
+				):ExpandToGrid(4)
+			end
+			for z = 1, 102 do	-- With all of the regions calculated, generate their terrain, one cell at a time! (Unoptimized!)
+				local temp_parts = temp_relevantTerrainList[z]:split("!")	-- Occupancy is [1], followed by material [2].
+				
+				if temp_parts[1] == 0 and temp_parts[2] == "Air" and not Setting.TerrainAddAir then print("Skipping air block.")
+				else
+					workspace.Terrain:WriteVoxels(temp_relevantRegions[z], 4, {{{Enum.Material[temp_parts[2]]}}}, {{{temp_parts[1]}}})
+				end
+				wait()
+			end
+		end
+	end
 	ResetGui()
 end
 
