@@ -24,6 +24,10 @@
 	tapping/clicking the terrain saving button!
 ]]--
 
+if not game:IsLoaded() then game.Loaded:Wait() end
+task.wait(0.975)
+print("Xane's Model Recreator GUI is initializing... (Please work!)")
+
 -- SERVICES
 local Players			= game:GetService("Players")	-- These are the three locations that can be accessed using this script.
 local Lighting			= game:GetService("Lighting")
@@ -1327,6 +1331,28 @@ filename_box.FocusLost:Connect(function()
 	end
 end)
 
+local PendingTerrainFile : SavedTerrainStruct = nil
+-- Iterates through a specific range of X slices in a terrain scan and stores them in a table, to be written to a JSON file.
+local function ProcessTerrainRows(_tOccupancy : any, _tMaterials : any, _startRow : number, _length : number)
+	local success3, errormsg3 = pcall(function()
+		for x = _startRow, _startRow + _length do
+			for y = 1, 50 do	-- HARDCODED 🤮
+				local temp_zSlice = ""	-- At the start of each third-layer array, make a new string for this line's data.
+				for z = 1, 102 do	-- HARDCODED 🤮
+					if z > 1 then temp_zSlice ..= "," end	-- Add a comma after every item after the first.
+					temp_zSlice ..= tostring(_tOccupancy[x][y][z]) .. "!" .. _tMaterials[x][y][z].Name
+				end
+				if y % 4 == 0 then task.wait() end	-- Wait a split-second for every fourth height.
+				-- Add this slice's contents to an item, then move on.
+				table.insert(PendingTerrainFile.Data, x*y, temp_zSlice)
+			end
+		end
+	end)
+	
+	if not success3 then warn("Unable to finish converting terrain section due to " .. errormsg3) end
+	return success3, errormsg3
+end
+
 terrainSaveButton.MouseButton1Click:Connect(function()
 	if not IsBusy and LastSafeName:len() > 0 then
 		IsBusy = true
@@ -1352,31 +1378,31 @@ terrainSaveButton.MouseButton1Click:Connect(function()
 			end
 		end
 		
-		local temp_tFileContents : SavedTerrainStruct	= {
-			Data										= {},
-			Position									= table.create(3, 0),
-			Size										= table.create(3, 0),
-			Properties									= {	-- Annoyingly, the "decoration" and "grass length" properties are locked.
-				MaterialColors							= {},
-				WaterColor								= workspace.Terrain.WaterColor,
-				WaterReflectance						= workspace.Terrain.WaterReflectance,
-				WaterTransparency						= workspace.Terrain.WaterTransparency,
-				WaterWaveSize							= workspace.Terrain.WaterWaveSize,
-				WaterWaveSpeed							= workspace.Terrain.WaterWaveSpeed
+		PendingTerrainFile			= {
+			Data					= table.create(102*50, ""),	-- HARDCODED 🤮
+			Position				= table.create(3, 0),
+			Size					= table.create(3, 0),
+			Properties				= {	-- Annoyingly, the "decoration" and "grass length" properties are locked.
+				MaterialColors		= {},
+				WaterColor			= workspace.Terrain.WaterColor,
+				WaterReflectance	= workspace.Terrain.WaterReflectance,
+				WaterTransparency	= workspace.Terrain.WaterTransparency,
+				WaterWaveSize		= workspace.Terrain.WaterWaveSize,
+				WaterWaveSpeed		= workspace.Terrain.WaterWaveSpeed
 			}
 		}
 		for _,material in TerrainMaterialList do	-- Grab all of the terrain material colors using the intended function.
 			
 			local success, errormsg = pcall(function()
 				table.insert(
-					temp_tFileContents.Properties.MaterialColors,
+					PendingTerrainFile.Properties.MaterialColors,
 					Recreator.EncodeValueForJSON(workspace.Terrain:GetMaterialColor(Enum.Material[material]), "Color3")
 				)
 			end)
 			
 			if success then print("Got", material, "terrain color successfully!")
 			else
-				table.insert(temp_tFileContents.Properties.MaterialColors, {0,0,0})	-- Save pure black as a placeholder.
+				table.insert(PendingTerrainFile.Properties.MaterialColors, {0,0,0})	-- Save pure black as a placeholder.
 				warn("Failed to get " .. material or "UNKNOWN" .. "'s terrain color!")
 				pcall(function() print("Enum:", Enum.Material[material]) end)
 			end
@@ -1387,7 +1413,7 @@ terrainSaveButton.MouseButton1Click:Connect(function()
 		local temp_tR3 = Region3.new(temp_tCenter-TerrainSaveSize, temp_tCenter+TerrainSaveSize):ExpandToGrid(4)
 		local temp_tGrabMaterials = nil	-- A 3D array of terrain cells' material EnumItems.
 		local temp_tGrabOccupancy = nil	-- Another 3D array, which stores how much of each cell is occupied by terrain.
-		temp_tFileContents.Position = temp_tCenter-TerrainSaveSize
+		PendingTerrainFile.Position = temp_tCenter-TerrainSaveSize
 		
 		local success, errormsg = pcall(function()
 			message.Text = "Attempting to capture terrain, please wait! Your app may freeze for a few seconds while this happens."
@@ -1398,35 +1424,33 @@ terrainSaveButton.MouseButton1Click:Connect(function()
 		if success then
 			message.Text = "Gotcha! Now squeezing terrain occupancy/material data into smaller arrays..."
 			ToggleUI(true)
-			progress_ui.Text = ""
+			progress_ui.Text = "Saving terrain to a file..."
 			progress_ui.Visible = true
-			temp_tFileContents.Size = Recreator.EncodeValueForJSON(Vector3.new(102,50,102), "Vector3")
+			PendingTerrainFile.Size = Recreator.EncodeValueForJSON(Vector3.new(102,50,102), "Vector3")
 			
 			--[[
 				This code block may seem confusing, but it's just iterating through each sub-array in order, concatenating each
 				value pair ([occupancy]![material]) into a comma-separated string list, Each "slice" is checked in order, turned
 				into a long string, which is added to a basic array, "Data", in the saved JSON file.
+				
+				To hopefully speed up this process, this processes four different rows at the same time, and only yields for the
+				last fourth.
 			]]--
-			local success3, errormsg3 = pcall(function()
-				for x = 1, 102 do
-					for y = 1, 50 do
-						local temp_zSlice = ""	-- At the start of each third-layer array, make a new string for this line's data.
-						for z = 1, 102 do
-							if z > 1 then temp_zSlice ..= "," end	-- Add a comma after every item after the first.
-							progress_ui.Text =
-								"Saving  " ..
-								x or "??" .. "," .. y or "??" .. "," .. z or "??" .. "\u{000D}\u{000A}" ..
-								tostring(temp_tGrabOccupancy[x][y][z]) or "?" .. " / " ..
-								temp_tGrabMaterials[x][y][z].Name or "Unknown"
-							temp_zSlice ..= tostring(temp_tGrabOccupancy[x][y][z]) .. "!" .. temp_tGrabMaterials[x][y][z].Name
-							if z % 8 == 0 then task.wait() end	-- Wait a split-second for every second cell.
-						end
-						table.insert(temp_tFileContents.Data, temp_zSlice)	-- Add this slice's contents to an item, then move to the next.
-						task.wait()
-					end
+			-- HARDCODED 🤮
+			task.spawn(function() ProcessTerrainRows(temp_tGrabOccupancy, temp_tGrabMaterials, 1, 25) end)
+			task.spawn(function() ProcessTerrainRows(temp_tGrabOccupancy, temp_tGrabMaterials, 26, 24) end)
+			task.spawn(function() ProcessTerrainRows(temp_tGrabOccupancy, temp_tGrabMaterials, 51, 25) end)
+			local success, errormsg = ProcessTerrainRows(temp_tGrabOccupancy, temp_tGrabMaterials, 77, 25)
+			progress_ui.Text = "Waiting for all threads to complete jobs..."
+			
+			--Wait until all 102 rows (X) have been written to the file. If any string is too short, wait another second.
+			while true do
+				for num,str in PendingTerrainFile.Data do
+					if str:len() < 1 then break end
+					if num % 100 == 0 then task.wait() end
 				end
-			end)
-			progress_ui.Text = "Done!"
+				wait(1.5)
+			end
 			progress_ui.Visible = false
 			
 			table.clear(temp_tGrabMaterials); table.clear(temp_tGrabOccupancy);
@@ -1435,7 +1459,7 @@ terrainSaveButton.MouseButton1Click:Connect(function()
 				-- Everything should be in the dictionary entry now, so let's turn it into a JSON file!
 				local temp_tJSONVer:string? = nil
 				local success1, errormsg1 = pcall(function()
-					temp_tJSONVer = game:GetService("HttpService"):JSONEncode(temp_tFileContents)
+					temp_tJSONVer = game:GetService("HttpService"):JSONEncode(PendingTerrainFile)
 				end)
 				
 				if success1 then
@@ -1465,7 +1489,8 @@ terrainSaveButton.MouseButton1Click:Connect(function()
 			message.Text = "Unfortunately, terrain couldn't be saved here. Reason: " .. errormsg or "No error message given."
 		end
 		
-		table.clear(temp_tFileContents)
+		table.clear(PendingTerrainFile)
+		PendingTerrainFile = nil
 		IsBusy = false
 		ToggleUI(false)
 	end
