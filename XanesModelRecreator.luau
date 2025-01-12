@@ -24,10 +24,6 @@
 	tapping/clicking the terrain saving button!
 ]]--
 
-if not game:IsLoaded() then game.Loaded:Wait() end
-task.wait(0.975)
-print("Xane's Model Recreator GUI is initializing... (Please work!)")
-
 -- SERVICES
 local Players			= game:GetService("Players")	-- These are the three locations that can be accessed using this script.
 local Lighting			= game:GetService("Lighting")
@@ -1175,25 +1171,25 @@ end
 -- Slides the main window on/off the screen. Normally, this is prevented when anything important is happening, but _force will bypass restrictions.
 local function ToggleUI(_force : boolean)
 	if not IsBusy or _force then
+		local PreviouslyBusy = IsBusy	-- Keep in mind if the busy flag was set prior to this function running.
+		IsBusy = true
 		close_button.Visible = GUIShown	-- Show the close button when the user closes the main UI.
+		
 		if GUIShown then
-			IsBusy = true
 			if #Recreator.Selection <= 0 then toggle_button.Text = "Open Save GUI..."
 			else toggle_button.Text = "Select Instances... (" .. tostring(#Recreator.Selection) .. ")"
 			end
 			toggle_button.BackgroundColor3 = BtnColor_Ready
 			main_frame:TweenPosition(UDim2.fromScale(0.5, 2.0), Enum.EasingDirection.InOut, Enum.EasingStyle.Quad, 0.333, true)
 			task.wait(0.125)
-			IsBusy = false
 		else
-			IsBusy = true
 			toggle_button.Text = "Hide GUI"
 			toggle_button.BackgroundColor3 = BtnColor_Caution
 			main_frame:TweenPosition(UDim2.fromScale(0.5, 0.55), Enum.EasingDirection.Out, Enum.EasingStyle.Back, 0.35, true)
 			task.wait(0.35)
-			IsBusy = false
 		end
-
+		
+		IsBusy = PreviouslyBusy	-- Unset the flag, but only if it wasn't set by another function before this ran.
 		GUIShown = not GUIShown
 	end
 end
@@ -1401,6 +1397,9 @@ terrainSaveButton.MouseButton1Click:Connect(function()
 		
 		if success then
 			message.Text = "Gotcha! Now squeezing terrain occupancy/material data into smaller arrays..."
+			ToggleUI(true)
+			progress_ui.Text = ""
+			progress_ui.Visible = true
 			temp_tFileContents.Size = Recreator.EncodeValueForJSON(Vector3.new(102,50,102), "Vector3")
 			
 			--[[
@@ -1414,21 +1413,21 @@ terrainSaveButton.MouseButton1Click:Connect(function()
 						local temp_zSlice = ""	-- At the start of each third-layer array, make a new string for this line's data.
 						for z = 1, 102 do
 							if z > 1 then temp_zSlice ..= "," end	-- Add a comma after every item after the first.
-							local _,error2 = pcall(function()
-								print("Terrain slice entry contents now:")
-								print("zSlice contents:", temp_zSlice)
-								print("Overall array:", tostring(temp_tGrabOccupancy))
-								print("X:", tostring(x))
-								print("Y:", tostring(y))
-								print("Z:", tostring(z))
-							end)
+							progress_ui.Text =
+								"Saving terrain... Currently checking " ..
+								x or "??" .. ", " .. y or "??" .. ", " .. z or "??" .. "\u{000D}\u{000A}" ..
+								tostring(temp_tGrabOccupancy[x][y][z]) or "?" .. "/" ..
+								temp_tGrabMaterials[x][y][z].Name or "Unknown"
 							temp_zSlice ..= tostring(temp_tGrabOccupancy[x][y][z]) .. "!" .. temp_tGrabMaterials[x][y][z].Name
+							if z % 2 == 1 then task.wait() end	-- Wait a split-second for every second cell.
 						end
 						table.insert(temp_tFileContents.Data, temp_zSlice)	-- Add this slice's contents to an item, then move to the next.
 						task.wait()
 					end
 				end
 			end)
+			progress_ui.Text = "Done!"
+			progress_ui.Visible = false
 			
 			table.clear(temp_tGrabMaterials); table.clear(temp_tGrabOccupancy);
 			
@@ -1468,6 +1467,7 @@ terrainSaveButton.MouseButton1Click:Connect(function()
 		
 		table.clear(temp_tFileContents)
 		IsBusy = false
+		ToggleUI(false)
 	end
 end)
 
