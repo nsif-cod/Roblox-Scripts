@@ -1414,12 +1414,12 @@ terrainSaveButton.MouseButton1Click:Connect(function()
 						for z = 1, 102 do
 							if z > 1 then temp_zSlice ..= "," end	-- Add a comma after every item after the first.
 							progress_ui.Text =
-								"Saving terrain... Currently checking " ..
-								x or "??" .. ", " .. y or "??" .. ", " .. z or "??" .. "\u{000D}\u{000A}" ..
-								tostring(temp_tGrabOccupancy[x][y][z]) or "?" .. "/" ..
+								"Saving  " ..
+								x or "??" .. "," .. y or "??" .. "," .. z or "??" .. "\u{000D}\u{000A}" ..
+								tostring(temp_tGrabOccupancy[x][y][z]) or "?" .. " / " ..
 								temp_tGrabMaterials[x][y][z].Name or "Unknown"
 							temp_zSlice ..= tostring(temp_tGrabOccupancy[x][y][z]) .. "!" .. temp_tGrabMaterials[x][y][z].Name
-							if z % 2 == 1 then task.wait() end	-- Wait a split-second for every second cell.
+							if z % 8 == 0 then task.wait() end	-- Wait a split-second for every second cell.
 						end
 						table.insert(temp_tFileContents.Data, temp_zSlice)	-- Add this slice's contents to an item, then move to the next.
 						task.wait()
