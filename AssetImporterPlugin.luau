@@ -2829,7 +2829,10 @@ end
 function ImportTerrain()
 	if Setting.TerrainColors then
 		for index,material in TerrainMaterialList do
-			workspace.Terrain:SetMaterialColor(Enum.Material[material], TempDataStorage.Properties.MaterialColors[index])
+			workspace.Terrain:SetMaterialColor(
+				Enum.Material[material],
+				GetValue(TempDataStorage.Properties.MaterialColors[index], "Color3")
+			)
 		end
 	end
 	
