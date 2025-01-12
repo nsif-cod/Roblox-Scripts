@@ -1365,6 +1365,7 @@ local function ProcessTerrainRows(_tOccupancy : any, _tMaterials : any, _startRo
 	end
 end
 
+print("🏔️About to process terrain button click function...")
 terrainSaveButton.MouseButton1Click:Connect(function()
 	if not IsBusy and LastSafeName:len() > 0 then
 		IsBusy = true
@@ -1419,8 +1420,12 @@ terrainSaveButton.MouseButton1Click:Connect(function()
 		end
 		
 		-- Finally, before we begin to capture the terrain itself, let's set up its region and add that to our file.
+		
 		local temp_tCenter:Vector3 =
 			workspace.Terrain:WorldToCell(Players.LocalPlayer.Character.Humanoid.RootPart.Position)
+		temp_tCenter = workspace.Terrain:CellCornerToWorld(temp_tCenter.X, temp_tCenter.Y, temp_tCenter.Z)	-- Snap to voxel grid.
+		temp_tCenter -= Vector3.one * 2	-- Shift it back to the middle of the cell.
+		
 		local temp_tR3 = Region3.new(temp_tCenter-TerrainSaveSize, temp_tCenter+TerrainSaveSize):ExpandToGrid(4)
 		local temp_tGrabMaterials = nil	-- A 3D array of terrain cells' material EnumItems.
 		local temp_tGrabOccupancy = nil	-- Another 3D array, which stores how much of each cell is occupied by terrain.

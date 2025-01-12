@@ -2841,7 +2841,7 @@ function ImportTerrain()
 		of assuming every save is always 102x50x102 terrain voxels big.
 	]]--
 	local terrainPos : Vector3 = workspace.Terrain:WorldToCell(GetValue(TempDataStorage.Position, "Vector3"))
-	terrainPos = workspace.Terrain:CellCornerToWorld(terrainPos.X/4, terrainPos.Y/4, terrainPos.Z/4)	-- Snap this position to grid.
+	terrainPos = workspace.Terrain:CellCornerToWorld(terrainPos.X, terrainPos.Y, terrainPos.Z)	-- Snap this position to grid.
 	terrainPos -= Vector3.one * 2	-- Shift it to the middle of the cell.
 	
 	workspace.CurrentCamera.CFrame = CFrame.new(terrainPos + (Vector3.one * 10), terrainPos)
