@@ -1332,8 +1332,9 @@ filename_box.FocusLost:Connect(function()
 end)
 
 local PendingTerrainFile : SavedTerrainStruct = nil
+local SavePercents = table.create(4, 0.0)	-- Each terrain-saving thread's completion percentage, used to display progress.
 -- Iterates through a specific range of X slices in a terrain scan and stores them in a table, to be written to a JSON file.
-local function ProcessTerrainRows(_tOccupancy : any, _tMaterials : any, _startRow : number, _length : number)
+local function ProcessTerrainRows(_tOccupancy : any, _tMaterials : any, _startRow : number, _length : number, _threadId : number)
 	local success3, errormsg3 = pcall(function()
 		for x = _startRow, _startRow + _length do
 			for y = 1, 50 do	-- HARDCODED 🤮
@@ -1346,11 +1347,14 @@ local function ProcessTerrainRows(_tOccupancy : any, _tMaterials : any, _startRo
 				-- Add this slice's contents to an item, then move on.
 				table.insert(PendingTerrainFile.Data, x*y, temp_zSlice)
 			end
+			SavePercents[_threadId] = math.map(x-_startRow, 0, _length, 0, 100)
 		end
 	end)
 	
-	if not success3 then warn("Unable to finish converting terrain section due to " .. errormsg3) end
-	return success3, errormsg3
+	if not success3 then
+		warn("Unable to finish converting terrain section due to " .. errormsg3)
+		SavePercents[_threadId] = -1
+	end
 end
 
 terrainSaveButton.MouseButton1Click:Connect(function()
@@ -1437,25 +1441,45 @@ terrainSaveButton.MouseButton1Click:Connect(function()
 				last fourth.
 			]]--
 			-- HARDCODED 🤮
-			task.spawn(function() ProcessTerrainRows(temp_tGrabOccupancy, temp_tGrabMaterials, 1, 25) end)
-			task.spawn(function() ProcessTerrainRows(temp_tGrabOccupancy, temp_tGrabMaterials, 26, 24) end)
-			task.spawn(function() ProcessTerrainRows(temp_tGrabOccupancy, temp_tGrabMaterials, 51, 25) end)
-			local success, errormsg = ProcessTerrainRows(temp_tGrabOccupancy, temp_tGrabMaterials, 77, 25)
-			progress_ui.Text = "Waiting for all threads to complete jobs..."
+			task.spawn(function() ProcessTerrainRows(temp_tGrabOccupancy, temp_tGrabMaterials, 1, 25, 1) end)
+			task.spawn(function() ProcessTerrainRows(temp_tGrabOccupancy, temp_tGrabMaterials, 26, 24, 2) end)
+			task.spawn(function() ProcessTerrainRows(temp_tGrabOccupancy, temp_tGrabMaterials, 51, 25, 3) end)
+			task.spawn(function() ProcessTerrainRows(temp_tGrabOccupancy, temp_tGrabMaterials, 77, 25, 4) end)
+			progress_ui.Text = "Beginning to save terrain!"
 			
 			--Wait until all 102 rows (X) have been written to the file. If any string is too short, wait another second.
-			while true do
+			local saveStatus="running"	-- This becomes "done" if all rows are added to the array successfully, and "fail" on errors.
+			while saveStatus == "running" do
+				wait(0.75)
+				
+				progress_ui.Text = "Saving terrain! " .. SavePercents[1]+SavePercents[2]+SavePercents[3]+SavePercents[4] .. "% done."
+				if SavePercents[1]<-0.01 or SavePercents[2]<-0.01 or SavePercents[3]<-0.01 or SavePercents[4]<-0.01 then
+					saveStatus = "fail"
+					break
+				elseif SavePercents[1]>=100 and SavePercents[2]>=100 and SavePercents[3]>=100 and SavePercents[4]>=100 then
+					saveStatus = "done"
+					break	-- Although this whole block's hackish, skip the slow loop below if all threads report they're complete.
+				end
 				for num,str in PendingTerrainFile.Data do
-					if str:len() < 1 then break end
+					-- If any string is too short, break this nested loop and restart the outer one.
+					if str:len() < 1 then
+						saveStatus = "running_r"
+						break
+					end
 					if num % 100 == 0 then task.wait() end
 				end
-				wait(1.5)
+				
+				-- HACKISH: If saveStatus was set to "running_r", reset it to "running" then let the loop restart. Otherwise, done!
+				if saveStatus == "running_r" then
+					saveStatus = "running"
+				else saveStatus = "done"
+				end
 			end
 			progress_ui.Visible = false
 			
 			table.clear(temp_tGrabMaterials); table.clear(temp_tGrabOccupancy);
 			
-			if success3 then
+			if saveStatus == "done" then
 				-- Everything should be in the dictionary entry now, so let's turn it into a JSON file!
 				local temp_tJSONVer:string? = nil
 				local success1, errormsg1 = pcall(function()
