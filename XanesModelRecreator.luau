@@ -1335,15 +1335,22 @@ local PendingTerrainFile : SavedTerrainStruct = nil
 local SavePercents = table.create(4, 0.0)	-- Each terrain-saving thread's completion percentage, used to display progress.
 -- Iterates through a specific range of X slices in a terrain scan and stores them in a table, to be written to a JSON file.
 local function ProcessTerrainRows(_tOccupancy : any, _tMaterials : any, _startRow : number, _length : number, _threadId : number)
-	local success3, errormsg3 = pcall(function()
+	local last_x = 1	-- The last XYZ/loop numbers this function reaches before erroring out, used for the "error" at the end.
+	local last_y = 1
+	local last_z = 1
+	
+	local success, errormsg = pcall(function()
 		for x = _startRow, _startRow + _length do
+			last_x = x
 			for y = 1, 50 do	-- HARDCODED 🤮
+				last_y = y
 				local temp_zSlice = ""	-- At the start of each third-layer array, make a new string for this line's data.
 				for z = 1, 102 do	-- HARDCODED 🤮
+					last_z = z
 					if z > 1 then temp_zSlice ..= "," end	-- Add a comma after every item after the first.
 					temp_zSlice ..= tostring(_tOccupancy[x][y][z]) .. "!" .. _tMaterials[x][y][z].Name
 				end
-				if y % 4 == 0 then task.wait() end	-- Wait a split-second for every fourth height.
+				if y % 5 == 0 then task.wait() end	-- Wait a split-second for every fifth height.
 				-- Add this slice's contents to an item, then move on.
 				table.insert(PendingTerrainFile.Data, x*y, temp_zSlice)
 			end
@@ -1351,9 +1358,10 @@ local function ProcessTerrainRows(_tOccupancy : any, _tMaterials : any, _startRo
 		end
 	end)
 	
-	if not success3 then
-		warn("Unable to finish converting terrain section due to " .. errormsg3)
+	if not success then
 		SavePercents[_threadId] = -1
+		warn("Unable to finish converting terrain because" .. errormsg)
+		warn("Last offset reached before failing: " .. last_x .. ", " .. last_y .. ", " .. last_z)
 	end
 end
 
@@ -1411,7 +1419,8 @@ terrainSaveButton.MouseButton1Click:Connect(function()
 		end
 		
 		-- Finally, before we begin to capture the terrain itself, let's set up its region and add that to our file.
-		local temp_tCenter:Vector3 = Players.LocalPlayer.Character.Humanoid.RootPart.Position
+		local temp_tCenter:Vector3 =
+			workspace.Terrain:WorldToCell(Players.LocalPlayer.Character.Humanoid.RootPart.Position)
 		local temp_tR3 = Region3.new(temp_tCenter-TerrainSaveSize, temp_tCenter+TerrainSaveSize):ExpandToGrid(4)
 		local temp_tGrabMaterials = nil	-- A 3D array of terrain cells' material EnumItems.
 		local temp_tGrabOccupancy = nil	-- Another 3D array, which stores how much of each cell is occupied by terrain.
@@ -1448,9 +1457,11 @@ terrainSaveButton.MouseButton1Click:Connect(function()
 			--Wait until all 102 rows (X) have been written to the file. If any string is too short, wait another second.
 			local saveStatus="running"	-- This becomes "done" if all rows are added to the array successfully, and "fail" on errors.
 			while saveStatus == "running" do
+				progress_ui.Text =
+					"Saving terrain! " ..
+					math.round(((SavePercents[1]+SavePercents[2]+SavePercents[3]+SavePercents[4])/4)*2)/2 .. "% done."
 				wait(0.75)
 				
-				progress_ui.Text = "Saving terrain! " .. SavePercents[1]+SavePercents[2]+SavePercents[3]+SavePercents[4] .. "% done."
 				if SavePercents[1]<-0.01 or SavePercents[2]<-0.01 or SavePercents[3]<-0.01 or SavePercents[4]<-0.01 then
 					saveStatus = "fail"
 					break
@@ -1504,8 +1515,7 @@ terrainSaveButton.MouseButton1Click:Connect(function()
 				end
 			else
 				message.Text =
-					"Unfortunately, the terrain data couldn't be squeezed due to an error: " ..
-					errormsg3 or "No message specified."
+					"Unfortunately, the terrain data couldn't be squeezed due to an error. Please check the Console (F9) for info.")"
 			end
 		else
 			message.Text = "Unfortunately, terrain couldn't be saved here. Reason: " .. errormsg or "No error message given."

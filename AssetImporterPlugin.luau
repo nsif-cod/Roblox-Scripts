@@ -2836,32 +2836,57 @@ function ImportTerrain()
 		end
 	end
 	
-	--[[
+	--[[+
 		HARDCODED VALUES 🤮 (Consider eventually supporting variable terrian capture sizes and offsets in the script!) instead
 		of assuming every save is always 102x50x102 terrain voxels big.
 	]]--
-	local terrainPos = GetValue(TempDataStorage.Position, "Vector3")
+	local terrainPos : Vector3 = workspace.Terrain:WorldToCell(GetValue(TempDataStorage.Position, "Vector3"))
+	
+	workspace.CurrentCamera.CFrame = CFrame.new(terrainPos + (Vector3.one * 10), terrainPos)
+	workspace.CurrentCamera.Focus = CFrame.new(terrainPos)
+	
 	for x = 1, 102 do
 		for y = 1, 50 do
-			-- Split this Z slice's string into a list of occupancies and materials.
-			local temp_relevantTerrainList = TempDataStorage.Data[x*y]:split(",")
-			local temp_relevantRegions = {}	-- Pre-generate all 102 rcell locations for this slice.
-			for offset = 1, 102 do
-				temp_relevantRegions[offset] = Region3.new(
-					(terrainPos + ((Vector3.xAxis*(x-1))*4) + ((Vector3.xAxis*(y-1))*4) * ((offset-1) * 4) - Vector3.one),
-					(terrainPos + ((Vector3.xAxis*(x-1))*4) + ((Vector3.xAxis*(y-1))*4) * ((offset-1) * 4) + Vector3.one)
-				):ExpandToGrid(4)
-			end
-			for z = 1, 102 do	-- With all of the regions calculated, generate their terrain, one cell at a time! (Unoptimized!)
-				local temp_parts = temp_relevantTerrainList[z]:split("!")	-- Occupancy is [1], followed by material [2].
-				
-				if temp_parts[1] == 0 and temp_parts[2] == "Air" and not Setting.TerrainAddAir then print("Skipping air block.")
-				else
-					workspace.Terrain:WriteVoxels(temp_relevantRegions[z], 4, {{{Enum.Material[temp_parts[2]]}}}, {{{temp_parts[1]}}})
+			if TempDataStorage.Data[x*y]:len()>0 then
+				-- Split this Z slice's string into a list of occupancies and materials.
+				local temp_relevantTerrainList = TempDataStorage.Data[x*y]:split(",")
+				local temp_relevantRegions = {}	-- Pre-generate all 102 rcell locations for this slice.
+				for offset = 1, 102 do
+					table.insert(temp_relevantRegions, Region3.new(
+						(terrainPos + ((Vector3.xAxis*(x-1))*4) + ((Vector3.yAxis*(offset-1))*4) + ((Vector3.zAxis*(y-1))*4)) - Vector3.one,
+						(terrainPos + ((Vector3.xAxis*(x-1))*4) + ((Vector3.yAxis*(offset-1))*4) + ((Vector3.zAxis*(y-1))*4)) + Vector3.one
+						):ExpandToGrid(4)
+					)
 				end
-				wait()
+				for z = 1, 102 do	-- With all of the regions calculated, generate their terrain, one cell at a time! (Unoptimized!)
+					Page1_TextBox.Text = "Now on XYZ " .. x .. ", " .. y .. ", " .. z .. "."
+					local temp_parts = temp_relevantTerrainList[z]:split("!")	-- Occupancy is [1], followed by material [2].
+					
+					if temp_parts[1] == 0 and temp_parts[2] == "Air" and not Setting.TerrainAddAir then print("Skipping air block.")
+					else
+						--[[
+							2x1x2 array variations:
+							{{{Enum.Material[temp_parts[2] ],Enum.Material[temp_parts[2] ]}},{{Enum.Material[temp_parts[2] ],Enum.Material[temp_parts[2] ]}}}
+							{{{temp_parts[1],temp_parts[1]}},{{temp_parts[1],temp_parts[1]}}}
+							
+							2x2 array variations:
+							{{Enum.Material[temp_parts[2] ],Enum.Material[temp_parts[2] ]},{Enum.Material[temp_parts[2] ],Enum.Material[temp_parts[2] ]}},
+							{{temp_parts[1],temp_parts[1]},{temp_parts[1],temp_parts[1]}}
+						]]--
+						workspace.Terrain:WriteVoxels(
+							temp_relevantRegions[z],
+							4,
+							{{{Enum.Material[temp_parts[2]],Enum.Material[temp_parts[2]]}}},
+							{{{temp_parts[1],temp_parts[1]}}}
+						)
+					end
+				end
+			else
+				warn("Found unexpected empty z-slice string at X " .. x .. " Y " .. y .. ". Leaving this line empty.")
 			end
+			task.wait()
 		end
+		task.wait()
 	end
 	ResetGui()
 end
