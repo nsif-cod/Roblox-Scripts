@@ -1,9 +1,9 @@
 # Description
-Collection of my scripts, mostly used to save assets from Roblox experiences.
+A repository of my scripts, mostly used to save assets from Roblox experiences, which are added to my personal collection.
 # Infinite Fun (Infinite Yield Mod)
 If you're looking for Infinite Fun, it has its own repository, : ![Xane123/InfiniteFun_IY](https://github.com/Xane123/InfiniteFun_IY).
 # How To Use
-To run any of these scripts in your executor, paste this LoadString into a new script, then replace "[script filename]" with the script you want:
+To run any of these scripts in your executor, paste this LoadString into a new script, then replace "[script filename]" with the script you want. Keep in mind RH Accessory Preserver's scripts are in the "RHAccessoryPreserver" sub-folder:
 ```lua
 loadstring(game:HttpGet('https://raw.githubusercontent.com/Xane123/Roblox-Scripts/main/[script filename]'))()
 ```
