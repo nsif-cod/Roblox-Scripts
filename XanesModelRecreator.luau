@@ -35,9 +35,12 @@ local ReplicatedStorage	= game:GetService("ReplicatedStorage")
 local ServerStorage		= game:GetService("ServerStorage")	-- This container stores the four "container imposter" Models for redirection.
 local MaterialService	= game:GetService("MaterialService")
 
+-- This script's GUI will be hidden by the executor.
+local hiddenUI = get_hidden_gui or gethui
+if not hiddenUI then error("Your executor doesn't support hiding GUI's, so it's too unsafe to use this script. Sorry!") end
+
 -- REFERENCES (PARTIAL, NOT INCLUDING GUI)
-local PlayerGui			= Players.LocalPlayer:WaitForChild("PlayerGui")
-local CoreGui			= game:GetService("CoreGui")
+local CoreGui			= hiddenUI()
 
 -- STATIC DATA
 local DefaultMessage	= "Welcome to Xane's Model Recreator v4, the ultimate instance capturer! Please choose a container above, select which instances you want, name it, then save!"
