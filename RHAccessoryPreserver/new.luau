@@ -1321,6 +1321,13 @@ CurrentDetectTypes = table.clone(DefaultDetectTypes)	-- Initially, just use the 
 if GameOverrideData[GAME_ID] then	Init_ParseDetectList(GameOverrideData[GAME_ID])		end
 if PlaceOverrideData[PLACE_ID] then	Init_ParseDetectList(PlaceOverrideData[PLACE_ID])	end
 
+-- Hides/dims the window and Command Palette save buttons when disabled, respectively, and the opposite when they're enabled.
+local function ChangeSaveButtonState(_enable : boolean)
+	Button_SaveCmd.Active			= _enable
+	Button_SaveCmd.BackgroundColor3	= Button_SaveCmd:GetAttribute(_enable and "EnabledColor" or "DisabledColor")
+	Button_SaveWindow.Visible		= _enable
+end
+
 local function DetectItemsOfType(_type : string)
 	PlayerSelectParams.RealScanType = ""	-- This variable isn't necessary after the hackish "player scan" occurs.
 	IsBusy = true
@@ -1398,6 +1405,7 @@ end
 	3D model in the preview area.
 ]]--
 local function SelectAndShowItem(_itemNum : number)
+	ChangeSaveButtonState(false)	-- Disable the save button until the selected item is cloned/displayed successfully.
 	if _itemNum and _itemNum > 0 and _itemNum < #ItemList then
 		if ItemList[_itemNum].SaveType == "I_Plyrs" then	-- If picking a player HACKISHLY, update SelectedPlayer then start a new scan.
 			local temp_player : Player? = Players:FindFirstChild(ItemList[_itemNum].Identifiers[1])
@@ -1461,6 +1469,8 @@ local function SelectAndShowItem(_itemNum : number)
 					GUI_ViewerMessage.Text		= "This Instance can't be previewed."
 					GUI_ViewerMessage.Visible	= true	-- Hide both previews, since this Instance is neither 3D nor 2D.
 				end
+				
+				ChangeSaveButtonState(true)	-- Since the content could be cloned, it should be safe to allow tapping the save buttons now.
 			else
 				DisplayToast("For some reason, the content you requested couldn't be cloned successfully...", "⚠️", 4.5)
 			end
@@ -1515,13 +1525,6 @@ function AddListPart(_name:string,_icon:string,_type:string,_identifiers:{ValidI
 	return nil
 end
 
--- Hides/dims the window and Command Palette save buttons when disabled, respectively, and the opposite when they're enabled.
-local function ChangeSaveButtonState(_enable : boolean)
-	Button_SaveCmd.Active			= _enable
-	Button_SaveCmd.BackgroundColor3	= Button_SaveCmd:GetAttribute(_enable and "EnabledColor" or "DisabledColor")
-	Button_SaveWindow.Visible		= _enable
-end
-
 function ClearList()
 	ChangeSaveButtonState(false)	-- Disable both save buttons, since there won't be any savable instances soon.
 	
@@ -1542,6 +1545,7 @@ function ClearList()
 	GUI_Viewer2D.Visible			= false
 	GUI_ViewerMessage.Text			= DEF_PREVIEW_MSG
 	GUI_ViewerMessage.Visible		= true
+	ChangeSaveButtonState(false)
 	return nil
 end
 ClearList()
@@ -1585,27 +1589,32 @@ function DisplayToast(_text : string, _icon : string, _time : number)
 		newToast.LayoutOrder	= HighestToastNumber
 		newToast.Visible		= true
 		newToast.Parent			= GUI_ToastBounds
-		newToast.Icon.MouseButton1Click:Connect(function() CloseToast(newGuid) end)
 		
 		local Tween_FadeIn		= TweenService:Create(newToast, TI_TOAST_FADEIN, {GroupTransparency = 0})
 		ActiveToasts[newGuid]	= {
 			GUIElement			= newToast,
 			Tween				= Tween_FadeIn
 		}
-		Tween_FadeIn:Play()	-- Fade in the toast.
-		Debris:AddItem(Tween_FadeIn, TI_TOAST_FADEIN.Time * 1.5)	-- Ensure this Tween's always destroyed, even if not dismissed early.
 		
-		task.wait(TI_TOAST_FADEIN.Time + _time)
+		-- Fade in this toast, but don't let the player click/tap it to hide it early UNTIL this finishes, waiting to connect a function.
+		Tween_FadeIn:Play()
+		Tween_FadeIn.Completed:Wait()
+		Tween_FadeIn:Destroy()
+		newToast.Icon.MouseButton1Click:Connect(function() CloseToast(newGuid) end)
+		
+		task.wait(_time)
 		CloseToast(newGuid)	-- All toasts automatically close after a delay. This function won't run if the user closed it before this, too.
 	end)
 end
 
 -- GUI BUTTON FUNCTIONS
 Button_ListCmd.MouseButton1Click:Connect(function()	-- The "list" command button toggles window visibility.
-	GUI_Window.Visible		= not GUI_Window.Visible
+	GUI_Window.Visible			= not GUI_Window.Visible
+	GUICarrier_Commands.Visible	= not GUI_Window.Visible
 end)
 Button_CloseWindow.MouseButton1Click:Connect(function()	-- The window's close button does the same thing, but always hides itself.
-	GUI_Window.Visible		= false
+	GUI_Window.Visible			= false
+	GUICarrier_Commands.Visible	= true
 end)
 
 -- Long-tap or right-click the Command Palette close button to close RH Accessory Preserver.
@@ -1670,6 +1679,7 @@ local function SaveItem(_fallbackCache : boolean, _override : boolean)
 	local tryUsingCache							= false	-- Only consider using the preview/cached item if anything is inside the Folder.
 	if _fallbackCache and #GUI_CurrentCache:GetChildren() > 0 then tryUsingCache = true end
 	IsBusy = true
+	ChangeSaveButtonState(false)	-- Disable save buttons until we're done saving this content.
 	
 	local success, errormsg						= pcall(function()
 		-- Are we saving something from Royale High? All RH-specific SaveTypes end in those letters. If we are, refresh its references!
@@ -1750,6 +1760,8 @@ local function SaveItem(_fallbackCache : boolean, _override : boolean)
 	end)
 	
 	IsBusy = false
+	ChangeSaveButtonState(true)	-- We're done, so the save button should be safe to re-enable.
+	
 	if not success and errormsg and type(errormsg) == "string" and errormsg:len()>0 and errormsg:sub(1,2) ~= "x" then
 		DisplayToast("An error occurred while trying to save your target: " .. tostring(errormsg) or "[no error provided]", "🚫", 8.5)
 	end
