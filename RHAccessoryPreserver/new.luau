@@ -120,7 +120,7 @@ GUICarrier_Commands.BackgroundColor3 = Color3.new(0.15, 0.145, 0.176475)
 GUICarrier_Commands.BorderSizePixel = 0
 GUICarrier_Commands.Position = UDim2.fromScale(0.625, 0.1)
 GUICarrier_Commands.Size = UDim2.fromScale(0.225, 0.1125)
-GUICarrier_Commands.Visible = false
+GUICarrier_Commands.Visible = true
 GUICarrier_Commands.Name = "CommandPalette"
 GUICarrier_Commands.Parent = GUI_Base
 
@@ -303,7 +303,7 @@ GUI_ToastBounds.Active = true
 GUI_ToastBounds.Interactable = true
 GUI_ToastBounds.Position = UDim2.new(1, -8, 1, -8)
 GUI_ToastBounds.Size = UDim2.new(0.5, 0, 0.75, 0)
-GUI_ToastBounds.Visible = false
+GUI_ToastBounds.Visible = true
 GUI_ToastBounds.ZIndex = 3
 GUI_ToastBounds.Name = "ToastBounds"
 GUI_ToastBounds.Parent = GUI_Base
@@ -387,7 +387,7 @@ GUI_Window.BorderColor3 = Color3.new(0, 0, 0)
 GUI_Window.BorderSizePixel = 0
 GUI_Window.Position = UDim2.new(0.5, 0, 0.5, 0)
 GUI_Window.Size = UDim2.new(0.725000024, 0, 0.899999976, 0)
-GUI_Window.Visible = true
+GUI_Window.Visible = false
 GUI_Window.ZIndex = 2
 GUI_Window.Name = "WindowBack"
 GUI_Window.Parent = GUI_Base
@@ -1211,6 +1211,8 @@ local SaveTypeDefs : {SaveType}			= {
 	["Chara"]							= {
 		ContentType						= "3D",
 		Get								= function(_saveParams : GetFuncParams, _contextIDs : {ValidIDValues})
+			DisplayToast("Mum-Ma, here's a slice of TOAST!", "🍞", 5)
+			print("Tried to save a character!", _contextIDs[1])
 			local result:SaveReturnTypes= nil
 			local temp_player : Player?	= Players:FindFirstChild(_contextIDs[1])
 			if temp_player then
@@ -1458,6 +1460,8 @@ local function SelectAndShowItem(_itemNum : number)
 						GUI_ViewerMessage.Text		= "This Instance can't be previewed."
 						GUI_ViewerMessage.Visible	= true	-- Hide both previews, since this Instance is neither 3D nor 2D.
 					end
+				else
+					DisplayToast("For some reason, the content you requested couldn't be cloned successfully...", "⚠️", 4.5)
 				end
 			end
 		end
