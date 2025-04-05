@@ -903,7 +903,7 @@ local TI_TOAST_FADEOUT						= TweenInfo.new(0.625, Enum.EasingStyle.Quad, Enum.E
 -- Default detection categories/types, which should work for most Roblox games that use standard characters and tools.
 local DefaultDetectTypes					= {
 	"Chara",										-- R15 characters linked to players.
-	-- "Tools",										-- Finds all tools in a player's backpack, character model, and StarterPack. (Disabled due to a missing SaveType.)
+	-- "Tools",										-- Finds all tools in a player's backpack, character model, and StarterPack.
 	"GUI"											-- Lets the user save all or any ScreenGui from their PlayerGui.
 }
 
@@ -972,7 +972,7 @@ local DetectTypeDefs : {ScanType}			= {
 		control skinned mesh ("boned") characters like Care Bears: Caring Quest, so make sure your character looks like something
 		similar to a Robloxian, or be prepared to close the Roblox app before using this scan type.
 	]]--
-	["Char"]								= {
+	["Chara"]								= {
 		Title								= "Characters",
 		PlayerContext						= false,		-- Each player will only add one entry to the list, so they're all listed.
 		ContentType							= "3D",
@@ -980,7 +980,7 @@ local DetectTypeDefs : {ScanType}			= {
 			for _,player in Players:GetPlayers() do
 				local temp_char = player.Character
 				if temp_char then
-					AddListPart(player.Name, "🧑", "Char",{player.Name}, player)
+					AddListPart(player.Name, "🧑", "Chara",{player.Name}, player)
 				end
 			end
 			
@@ -1149,7 +1149,7 @@ local SaveTypeDefs : {SaveType}			= {
 		
 		Temporarily makes the target Player's character "archivable" then clones it, which includes any accessories and their tool.
 	]]--
-	["Char"]							= {
+	["Chara"]							= {
 		ContentType						= "3D",
 		Get								= function(_saveParams : GetFuncParams, _contextIDs : {ValidIDValues})
 			local result:SaveReturnTypes= nil
@@ -1460,7 +1460,7 @@ function ClearList()
 	SelectedIndex					= 0	-- Deselect an item, if it's selected.
 	
 	-- Also clear the visible list, keeping internal template and list instances in-tact.
-	for _,inst : Instance in GUI_ItemList do
+	for _,inst : Instance in GUI_ItemList:GetChildren() do
 		if not inst.Name:find("Template") and not inst:IsA("UIListLayout") then inst:Destroy() end
 	end
 	
@@ -1572,6 +1572,18 @@ Button_RefreshWindow.MouseButton1Click:Connect(function()
 end)
 
 --[[
+	RH Accessory Preserver is SO CLOSE to being finished, but it isn't near the finish line just yet! There's still MORE WORK
+	to do, so let's get started and finish this upgrade! Seemingly most ScanTypes have been implemented, although DormRH and
+	CharRH aren't there yet. Also, most SaveTypes don't exist, so things like tools can't be saved/previewed yet.
+	
+	Additionally, speaking of saving, although the preview pane (in the window) should work, saving itself is impossible!
+	Obviously, the save button should try to clone something using the selected item (ItemList[SelectedIndex])'s SaveType,
+	then the function should check if a model/GUI/whatever with the same name is in the requested folder and sub-folder (which
+	is set by the SaveType using a specific attribute that is removed after the function reads it). Unless the function is called
+	with the "override" parameter set (long-tap), the 
+]]--
+
+--[[
 	<custom><nb><md>
 	One of the major functions in this script, which runs SaveTypes' Get() functions to clone specific Instances, moving them to a
 	specific sub-folder in Lighting (which can be saved using UniversalSynSaveInstance or my Recreation API). Although the user
@@ -1649,7 +1661,7 @@ local function SaveItem(_fallbackCache : boolean, _override : boolean)
 						"🙅",
 						9.5
 					)
-					error("xCouldn't move the item because an Instance with the same name was at the destination.")
+					error("xCouldn't move the item.")	-- This error shouldn't appear, as it just stops execution without success.
 				else
 					temp_duplicate:Destroy()	-- Immediately remove the original item, which is being replaced.
 				end
@@ -1681,6 +1693,7 @@ Button_SaveWindow.MouseButton1Click:Connect(function()	SaveItem(true, false)	end
 Button_SaveWindow.MouseButton2Click:Connect(function()	SaveItem(true, true)	end)
 Button_SaveWindow.TouchLongPress:Connect(function()		SaveItem(true, true)	end)
 
+-- The Command Bar's save button will never use the preview's model, but can forcefully save stuff with a long-tap/right-click.
 Button_SaveCmd.MouseButton1Click:Connect(function()		SaveItem(false, false)	end)
 Button_SaveCmd.MouseButton2Click:Connect(function()		SaveItem(false, true)	end)
 Button_SaveCmd.TouchLongPress:Connect(function()		SaveItem(false, true)	end)
