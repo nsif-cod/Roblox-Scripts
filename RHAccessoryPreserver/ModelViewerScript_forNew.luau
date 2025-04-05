@@ -10,7 +10,7 @@ if not hiddenUI then error("Your executor doesn't support hiding GUI's, so it's 
 local GUI_Base : ScreenGui						= hiddenUI():WaitForChild("NewRHAccessoryPreserver")
 task.wait(0.333)
 
-local GUI_Viewport : ViewportFrame				= GUI_Base:WaitForChild("WindowBack"):WaitForChild("Contents"):WaitForChild("Preview")
+local GUI_Viewport : ViewportFrame				= GUI_Base:WaitForChild("WindowBack"):WaitForChild("Contents"):WaitForChild("PreviewModel")
 local GUI_Scene : MeshPart						= GUI_Viewport:WaitForChild("WorldModel"):WaitForChild("PreviewScene")
 
 -- Preview camera setup

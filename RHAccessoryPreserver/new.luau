@@ -1713,8 +1713,8 @@ local function SaveItem(_fallbackCache : boolean, _override : boolean)
 				error("The target couldn't be found/cloned.")
 			end
 		else
-			DisplayToast("Using live " .. FinalItem.ClassName .. ".", "ℹ️", 3)
 			FinalItem							= savedContent
+			DisplayToast("Using live " .. FinalItem.ClassName .. ".", "ℹ️", 3)
 		end
 		
 		-- We're almost done! First, see if the user's sub-folder exists, and if it doesn't, create it now.
