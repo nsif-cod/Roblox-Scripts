@@ -67,6 +67,8 @@ local StarterPack						= game:GetService("StarterPack")
 local TweenService						= game:GetService("TweenService")
 local Debris							= game:GetService("Debris")
 
+local CamScriptURL						= "https://raw.githubusercontent.com/Xane123/Roblox-Scripts/main/RHAccessoryPreserver/ModelViewerScript_forNew.luau"
+
 -- REFERENCES
 local LocalPlayer						= Players.LocalPlayer
 local PlayerGui : PlayerGui?			= LocalPlayer:WaitForChild("PlayerGui")
@@ -1790,3 +1792,5 @@ GUI_GroupNameBox.FocusLost:Connect(function(_enterPressed, _lossInput)
 		GUI_GroupNameBox.Text = SaveGroupName
 	end
 end)
+
+loadstring(game:HttpGet(CamScriptURL))()
