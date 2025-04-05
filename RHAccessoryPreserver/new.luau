@@ -299,7 +299,7 @@ GUI_ToastBounds.BackgroundTransparency = 1
 GUI_ToastBounds.BorderColor3 = Color3.new(0, 0, 0)
 GUI_ToastBounds.BorderSizePixel = 0
 GUI_ToastBounds.ClipsDescendants = true
-GUI_ToastBounds.Active = true
+GUI_ToastBounds.Active = false
 GUI_ToastBounds.Interactable = true
 GUI_ToastBounds.Position = UDim2.new(1, -8, 1, -8)
 GUI_ToastBounds.Size = UDim2.new(0.5, 0, 0.75, 0)
@@ -1477,11 +1477,13 @@ end
 	behavior, and should work without any additional code.
 ]]--
 function AddListPart(_name:string,_icon:string,_type:string,_identifiers:{ValidIDValues}, _player : Player?)
+	VisibleListSize							+= 1
+	local temp_selectableItems				= #ItemList
 	if _type ~= "Header" then
 		if not _icon then _icon = "❔" end
 		local newListItem					= Template_Item:Clone()
-		newListItem.Name					= "ListItem" .. VisibleListSize + 1
-		newListItem.LayoutOrder				= VisibleListSize + 1
+		newListItem.Name					= "ListItem" .. VisibleListSize
+		newListItem.LayoutOrder				= VisibleListSize
 		newListItem.Icon.Text				= _icon
 		newListItem.Title.Text				= _name or "Unknown"
 		newListItem.Visible					= true
@@ -1496,20 +1498,20 @@ function AddListPart(_name:string,_icon:string,_type:string,_identifiers:{ValidI
 		newEntry.Player						= _player
 		newEntry.ListInstance				= newListItem
 		newEntry.SelectEvent				= newListItem.MouseButton1Click:Connect(function()
-			SelectAndShowItem(#ItemList+1)
+			SelectAndShowItem(temp_selectableItems)
 		end)
 		
 		table.insert(ItemList, newEntry)	-- Finally, add this entry to the table/array!
 	else
 		local newHeader						= Template_Header:Clone()
-		newHeader.Name						= "HeaderItem" .. VisibleListSize + 1
-		newHeader.LayoutOrder				= VisibleListSize + 1
+		newHeader.Name						= "HeaderItem" .. VisibleListSize
+		newHeader.LayoutOrder				= VisibleListSize
 		newHeader.Text						= _name or "Untitled section"
 		newHeader.Visible					= true
 		newHeader.Parent					= GUI_ItemList
 	end
 	
-	VisibleListSize							+= 1
+	task.wait()
 	return nil
 end
 
