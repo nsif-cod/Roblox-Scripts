@@ -1,3 +1,62 @@
+--[[
+	ROYALE HIGH ACCESSORY PRESERVER V2		|
+	PROUDLY MADE BY XANE MYERS IN APRIL 2025|
+	LAST UPDATED APRIL 5TH, 2025			|
+	----------------------------------------/
+	An amazing psuedo-sequel to an already powerful script, used for saving various (mostly 3D) assets from Roblox experiences,
+	including but no longer limited to Royale High! Run this script (preferably using Infinite Fun's 'rhsave' command) then tap
+	the second button (the "list" button) to open the main window. Here, you can tap any orange button near its top to scan for
+	any Instances, Models, or GUI elements that match that "category"'s  criteria.
+	
+	Pick something from the list then tap either "save" button to copy it to a folder in Lighting, a container Roblox games
+	barely use. Everything is placed in a sub-folder, but you can enter a name using the text box at the top of the window to
+	organize your saved items into specific sub-folders!
+	
+	Once you've saved everything you wanted (or start worrying you could get disconnected or kicked soon), you have a couple of
+	options to keep everything you took the time to copy/save:
+	
+	UNIVERSALSYNSAVEINSTANCE ('saveplace external' in Infinite Fun)
+	The easiest option, which I highly recommend! Run the script (use Infinite Fun to make it super easy, running that command)
+	then wait until the message in the top-right corner turns green and says that the file was written.
+	
+	From there, check your executor's workspace folder, transfer the RBXLX file to the computer, open it in Roblox Studio, then
+	check the Lighting service in the Explorer pane. Your saved items/models/GUI will be inside the "Saved Items" folder!
+	
+	XANE'S MODEL RECREATOR ('xmr' in Infinite Fun)
+	Close RH Accessory Preserver then open Xane's Model Recreator. Tap the "select" button at the top of your screen, then tap
+	the "Lighting" button. When the list appears, select the "lighting" list item or the "Saved Items" folder by tapping on its
+	icon/emoji. Once the checkmark emoji appears, enter a name in the text box at the bottom, then tap the "save" button.
+	
+	Unfortunately, this process isn't as quick as it could be. Install the "Xane's Asset Importer" plugin by following these
+	steps:
+	
+	1.	Download its RBXM file from [TODO: add the plugin's DL URL later].
+	2.	In Roblox Studio, open your Plugins Folder (in the new GUI, go to Plugins > Plugins Folder). Drag or move the RBXM file
+		into this folder.
+	3.	Close then re-open your current place/RBXL file; My plugin will create its own panel in your left sidebar.
+	4.	Check your executor's workspace folder, and transfer the JSON files with the name you entered in Xane's Model Recreator
+		to your computer.
+	5.	Open all of the files in a text editor, preferably one with tabs.
+	6.	For each file, copy its text, paste it into the sidebar, then press ENTER/click off, starting with #_header.json, then
+		advancing through each #_piece#.json file.
+	7.	Customize your import, click the "start" button, then wait until your import is complete.
+	
+	NOTE TO SELF TODO: Finish programming the ScanTypes and SaveTypes:
+	
+	ScanTypes:
+	•	CharaRH		Finds player characters like Chara, but uses the CharaRH SaveType. Also lists all of their equipped Dress Up items.
+	•	DormRH		Tries to find the active dorm, and allows the user to save the full room or any item in it, individually.
+	•	(DTI or It Girl character type?)
+	
+	SaveTypes:
+	•	Tool		Clones a matching tool found in a player's Backpack, character model, or StarterPack.
+	•	CharaRH		Temporarily moves EquippedStorage subfolders into the character then clones it, maintaining Weld links.
+	•	ItemRH		For accessories, skirts, wings, and hair Models. Tries to find each piece's "main Weld", disconnects, then clones it.
+	•	HeelsRH		Saves this Player's character model, then replaces their skin tone, name, and face with generic alternatives.
+	•	DormRH		Re-locates the loaded dorm room, then clones the full model.
+	•	FurniRH		Tries to find either an item with a matching debug ID or name within the loaded dorm, cloning and anonymizing it.
+]]--
+
 if not game:IsLoaded() then game.Loaded:Wait() end
 
 -- SERVICES
@@ -1358,6 +1417,11 @@ local function SelectAndShowItem(_itemNum : number)
 			for i,entry : DetectedItemEntry in ItemList do	-- Update all items' backgrounds, only giving the selected item a blue color.
 				entry.ListInstance.BackgroundTransparency = if i == _itemNum then 0 else 1
 				
+				-- Is this a RH-specific SaveType (ends in "RH")? Refresh its Instance references.
+				if ItemList[_itemNum].SaveType:sub(-3,-1) == "RH" then
+					RefreshRHInstanceReferences()
+				end
+				
 				-- Clone the relevant content (model, GUI, etc.) and place it in the correct viewer, based on its "ContentType" value.
 				local previewContent : SaveReturnTypes = SaveTypeDefs[ItemList[_itemNum].SaveType].Get(
 					{Previewing = true, WindowHasCache = false},
@@ -1572,18 +1636,6 @@ Button_RefreshWindow.MouseButton1Click:Connect(function()
 end)
 
 --[[
-	RH Accessory Preserver is SO CLOSE to being finished, but it isn't near the finish line just yet! There's still MORE WORK
-	to do, so let's get started and finish this upgrade! Seemingly most ScanTypes have been implemented, although DormRH and
-	CharRH aren't there yet. Also, most SaveTypes don't exist, so things like tools can't be saved/previewed yet.
-	
-	Additionally, speaking of saving, although the preview pane (in the window) should work, saving itself is impossible!
-	Obviously, the save button should try to clone something using the selected item (ItemList[SelectedIndex])'s SaveType,
-	then the function should check if a model/GUI/whatever with the same name is in the requested folder and sub-folder (which
-	is set by the SaveType using a specific attribute that is removed after the function reads it). Unless the function is called
-	with the "override" parameter set (long-tap), the 
-]]--
-
---[[
 	<custom><nb><md>
 	One of the major functions in this script, which runs SaveTypes' Get() functions to clone specific Instances, moving them to a
 	specific sub-folder in Lighting (which can be saved using UniversalSynSaveInstance or my Recreation API). Although the user
@@ -1612,6 +1664,11 @@ local function SaveItem(_fallbackCache : boolean, _override : boolean)
 	IsBusy = true
 	
 	local success, errormsg						= pcall(function()
+		-- Are we saving something from Royale High? All RH-specific SaveTypes end in those letters. If we are, refresh its references!
+		if ItemList[SelectedIndex].SaveType:sub(-3,-1) == "RH" then
+			RefreshRHInstanceReferences()
+		end
+		
 		local FinalItem : SaveReturnTypes		= nil
 		local savedContent : SaveReturnTypes	= SaveTypeDefs[ItemList[SelectedIndex].SaveType].Get(
 			{
