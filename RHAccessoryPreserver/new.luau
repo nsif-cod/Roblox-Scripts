@@ -205,7 +205,7 @@ Button_CloseCmd.TextWrapped = true
 Button_CloseCmd.TextYAlignment = Enum.TextYAlignment.Bottom
 Button_CloseCmd.BackgroundColor3 = Color3.new(0.901961, 0.458824, 0.717647)
 Button_CloseCmd.BorderSizePixel = 0
-Button_CloseCmd.LayoutOrder = 1
+Button_CloseCmd.LayoutOrder = 3
 Button_CloseCmd.Size = UDim2.fromScale(0.333, 1)
 Button_CloseCmd.Visible = true
 Button_CloseCmd.Name = "ButtonExit"
@@ -235,7 +235,7 @@ Button_ListCmd.TextYAlignment = Enum.TextYAlignment.Bottom
 Button_ListCmd.BackgroundColor3 = Color3.new(0.5, 0.68225, 0.941175)
 Button_ListCmd.BorderColor3 = Color3.new(0, 0, 0)
 Button_ListCmd.BorderSizePixel = 0
-Button_ListCmd.LayoutOrder = 2
+Button_ListCmd.LayoutOrder = 1
 Button_ListCmd.Size = UDim2.fromScale(0.333, 1)
 Button_ListCmd.Visible = true
 Button_ListCmd.Name = "ButtonList"
@@ -1418,51 +1418,51 @@ local function SelectAndShowItem(_itemNum : number)
 			SelectedIndex = _itemNum
 			for i,entry : DetectedItemEntry in ItemList do	-- Update all items' backgrounds, only giving the selected item a blue color.
 				entry.ListInstance.BackgroundTransparency = if i == _itemNum then 0 else 1
+			end
+			
+			-- Is this a RH-specific SaveType (ends in "RH")? Refresh its Instance references.
+			if ItemList[_itemNum].SaveType:sub(-3,-1) == "RH" then
+				RefreshRHInstanceReferences()
+			end
+			
+			-- Clone the relevant content (model, GUI, etc.) and place it in the correct viewer, based on its "ContentType" value.
+			local previewContent : SaveReturnTypes = SaveTypeDefs[ItemList[_itemNum].SaveType].Get(
+				{Previewing = true, WindowHasCache = false},
+				ItemList[_itemNum].Identifiers
+			)
+			if previewContent then
+				if #GUI_CurrentCache:GetChildren() > 0 then GUI_CurrentCache:ClearAllChildren() end
+				local cacheContent				= previewContent:Clone()	-- Place the cloned Instance in our cache, first.
+				cacheContent.Parent				= GUI_CurrentCache
 				
-				-- Is this a RH-specific SaveType (ends in "RH")? Refresh its Instance references.
-				if ItemList[_itemNum].SaveType:sub(-3,-1) == "RH" then
-					RefreshRHInstanceReferences()
-				end
-				
-				-- Clone the relevant content (model, GUI, etc.) and place it in the correct viewer, based on its "ContentType" value.
-				local previewContent : SaveReturnTypes = SaveTypeDefs[ItemList[_itemNum].SaveType].Get(
-					{Previewing = true, WindowHasCache = false},
-					ItemList[_itemNum].Identifiers
-				)
-				if previewContent then
-					if #GUI_CurrentCache:GetChildren() > 0 then GUI_CurrentCache:ClearAllChildren() end
-					local cacheContent				= previewContent:Clone()	-- Place the cloned Instance in our cache, first.
-					cacheContent.Parent				= GUI_CurrentCache
-					
-					if SaveTypeDefs[ItemList[_itemNum].SaveType].ContentType == "3D" then
-						previewContent:PivotTo(CFrame.identity)	-- Move our clone to the origin before displaying it in the 3D view.
-						previewContent.Parent		= GUI_ModelViewer	-- The 3D view camera script removes other Models automatically.
-						GUI_ViewerMessage.Visible	= false
-						GUI_Viewer2D.Visible		= false
-						GUI_Viewer3D.Visible		= true	-- Just show the 3D model viewer.
-					elseif SaveTypeDefs[ItemList[_itemNum].SaveType].ContentType == "2D" then
-						if #GUI_Viewer2D:GetChildren() > 0 then GUI_Viewer2D:ClearAllChildren() end
-						if previewContent:IsA("ScreenGui") then	-- Move everything out of the ScreenGui so it shows in the preview pane.
-							for _,child : GuiObject in previewContent:GetChildren() do
-								child.Parent = GUI_Viewer2D
-							end
-							previewContent:Destroy()	-- Get rid of the empty ScreenGui now.
-						else
-							previewContent.Parent	= GUI_Viewer2D	-- A Frame (or other GUI element) can be rendered normally.
+				if SaveTypeDefs[ItemList[_itemNum].SaveType].ContentType == "3D" then
+					previewContent:PivotTo(CFrame.identity)	-- Move our clone to the origin before displaying it in the 3D view.
+					previewContent.Parent		= GUI_ModelViewer	-- The 3D view camera script removes other Models automatically.
+					GUI_ViewerMessage.Visible	= false
+					GUI_Viewer2D.Visible		= false
+					GUI_Viewer3D.Visible		= true	-- Just show the 3D model viewer.
+				elseif SaveTypeDefs[ItemList[_itemNum].SaveType].ContentType == "2D" then
+					if #GUI_Viewer2D:GetChildren() > 0 then GUI_Viewer2D:ClearAllChildren() end
+					if previewContent:IsA("ScreenGui") then	-- Move everything out of the ScreenGui so it shows in the preview pane.
+						for _,child : GuiObject in previewContent:GetChildren() do
+							child.Parent = GUI_Viewer2D
 						end
-						
-						GUI_ViewerMessage.Visible	= false
-						GUI_Viewer3D.Visible		= false
-						GUI_Viewer2D.Visible		= true	-- Just show the 2D/GUI preview.
+						previewContent:Destroy()	-- Get rid of the empty ScreenGui now.
 					else
-						GUI_Viewer3D.Visible		= false
-						GUI_Viewer2D.Visible		= false
-						GUI_ViewerMessage.Text		= "This Instance can't be previewed."
-						GUI_ViewerMessage.Visible	= true	-- Hide both previews, since this Instance is neither 3D nor 2D.
+						previewContent.Parent	= GUI_Viewer2D	-- A Frame (or other GUI element) can be rendered normally.
 					end
+					
+					GUI_ViewerMessage.Visible	= false
+					GUI_Viewer3D.Visible		= false
+					GUI_Viewer2D.Visible		= true	-- Just show the 2D/GUI preview.
 				else
-					DisplayToast("For some reason, the content you requested couldn't be cloned successfully...", "⚠️", 4.5)
+					GUI_Viewer3D.Visible		= false
+					GUI_Viewer2D.Visible		= false
+					GUI_ViewerMessage.Text		= "This Instance can't be previewed."
+					GUI_ViewerMessage.Visible	= true	-- Hide both previews, since this Instance is neither 3D nor 2D.
 				end
+			else
+				DisplayToast("For some reason, the content you requested couldn't be cloned successfully...", "⚠️", 4.5)
 			end
 		end
 	else
@@ -1498,7 +1498,7 @@ function AddListPart(_name:string,_icon:string,_type:string,_identifiers:{ValidI
 		newEntry.Player						= _player
 		newEntry.ListInstance				= newListItem
 		newEntry.SelectEvent				= newListItem.MouseButton1Click:Connect(function()
-			SelectAndShowItem(temp_selectableItems)
+			SelectAndShowItem(temp_selectableItems + 1)
 		end)
 		
 		table.insert(ItemList, newEntry)	-- Finally, add this entry to the table/array!
@@ -1574,28 +1574,30 @@ end
 	dismiss any toast early by clicking/tapping on its icon.
 ]]--
 function DisplayToast(_text : string, _icon : string, _time : number)
-	local newGuid			= game:GetService("HttpService"):GenerateGUID(false)
-	HighestToastNumber		+= 1
-	
-	-- Clone and customize the toast template.
-	local newToast			= Template_Toast:Clone()
-	newToast.Message.Text	= type(_text) == "string" and _text or "No text was specified for this toast."
-	newToast.Icon.Text		= (type(_text) == "string" and _icon:len() < 3 and _icon) or "❔"
-	newToast.LayoutOrder	= HighestToastNumber
-	newToast.Visible		= true
-	newToast.Parent			= GUI_ToastBounds
-	newToast.Icon.MouseButton1Click:Connect(function() CloseToast(newGuid) end)
-	
-	local Tween_FadeIn		= TweenService:Create(newToast, TI_TOAST_FADEIN, {GroupTransparency = 0})
-	ActiveToasts[newGuid]	= {
-		GUIElement			= newToast,
-		Tween				= Tween_FadeIn
-	}
-	Tween_FadeIn:Play()	-- Fade in the toast.
-	Debris:AddItem(Tween_FadeIn, TI_TOAST_FADEIN.Time * 1.5)	-- Ensure this Tween's always destroyed, even if not dismissed early.
-	
-	task.wait(TI_TOAST_FADEIN.Time + _time)
-	CloseToast(newGuid)	-- All toasts automatically close after a delay. This function won't run if the user closed it before this, too.
+	task.defer(function()
+		local newGuid			= game:GetService("HttpService"):GenerateGUID(false)
+		HighestToastNumber		+= 1
+		
+		-- Clone and customize the toast template.
+		local newToast			= Template_Toast:Clone()
+		newToast.Message.Text	= type(_text) == "string" and _text or "No text was specified for this toast."
+		newToast.Icon.Text		= (type(_text) == "string" and _icon:len() < 3 and _icon) or "❔"
+		newToast.LayoutOrder	= HighestToastNumber
+		newToast.Visible		= true
+		newToast.Parent			= GUI_ToastBounds
+		newToast.Icon.MouseButton1Click:Connect(function() CloseToast(newGuid) end)
+		
+		local Tween_FadeIn		= TweenService:Create(newToast, TI_TOAST_FADEIN, {GroupTransparency = 0})
+		ActiveToasts[newGuid]	= {
+			GUIElement			= newToast,
+			Tween				= Tween_FadeIn
+		}
+		Tween_FadeIn:Play()	-- Fade in the toast.
+		Debris:AddItem(Tween_FadeIn, TI_TOAST_FADEIN.Time * 1.5)	-- Ensure this Tween's always destroyed, even if not dismissed early.
+		
+		task.wait(TI_TOAST_FADEIN.Time + _time)
+		CloseToast(newGuid)	-- All toasts automatically close after a delay. This function won't run if the user closed it before this, too.
+	end)
 end
 
 -- GUI BUTTON FUNCTIONS
@@ -1625,9 +1627,9 @@ end
 
 Button_CloseCmd.MouseButton1Click:Connect(function()
 	DisplayToast(
-		"To close RH Accessory Preserver, please "..GetLongTapText().." the close button. This makes it harder to accidentally close it.",
+		"To close RH Accessory Preserver, please "..GetLongTapText().." the close button.",
 		"ℹ️",
-		8.5
+		5.25
 	)
 end)
 Button_CloseCmd.MouseButton2Click:Connect(ExitAccessoryPreserver)
