@@ -1535,7 +1535,7 @@ function ClearList()
 	GUI_Viewer3D.Visible			= false
 	GUI_Viewer2D.Visible			= false
 	GUI_ViewerMessage.Text			= DEF_PREVIEW_MSG
-	GUI_ViewerMessage				= true
+	GUI_ViewerMessage.Visible		= true
 	return nil
 end
 ClearList()
