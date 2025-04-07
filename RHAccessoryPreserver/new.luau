@@ -903,9 +903,13 @@ local TDStorage : TypeDataStorageTypes	= {		-- An array SaveTypes can store refe
 	here is used to "restore" logic and proceed to scan for instances relating to the selected Player. "SelectedPlayer" isn't reset
 	until another "scan type" button is clicked/tappped, so the player can be stored in all entries for context.
 ]]--
-local PlayerSelectParams					= {
-	SelectedPlayer							= nil,	-- Player the user picked.
-	RealScanType							= "",	-- The intended ScanType that requested this Player selection.
+local PlayerSelectParams						: {
+	SelectedPlayer								: Player?,
+	RealScanType								: string
+}
+	= {
+		SelectedPlayer							= nil,	-- Player the user picked.
+		RealScanType							= "",	-- The intended ScanType that requested this Player selection.
 }
 
 -- Code from RH Accessory Preserver v1 which grabs references to RH's clothing/furniture GUIs and the EquippedStorage folder.
@@ -1010,6 +1014,8 @@ local DetectTypeDefs : {ScanType}			= {
 		THE hackish, internal repurposed ScanType shown/used for any other ScanType that needs "player context" like CharRH. This
 		ScanType (and the "item" template) have specific programming for I_Plyrs that updates SelectedPlayer then re-scans using
 		the user's original ScanType.
+		
+		This type doesn't include a "missing item" function because that's handled by the item-selection function's hardcoded check.
 	]]--
 	["I_Plyrs"]								= {
 		Title								= "Players (internal)",
@@ -1056,18 +1062,110 @@ local DetectTypeDefs : {ScanType}			= {
 		ScanType makes saving any shop item trivial! Try on your desired item, refresh the list/select yourself, find the item in the
 		list, then you can rapidly save toggles and variations by tapping the save button as soon as your clothes update!
 	]]--
-	["CharRH"]								= {
+	["CharaRH"]								= {
 		Title								= "Characters (RH)",
 		PlayerContext						= true,		-- Each player will display all of their clothing items and their character.
 		ContentType							= "3D",
 		Scan								= function()
-			for _,player in Players:GetPlayers() do
-				local temp_char = player.Character
-				if temp_char then
-					AddListPart(player.Name, "👤", "Char",{player.Name}, player)
+			-- First, try to get references to all of this player's folders (their character and EquippedStorage sub-folders)
+			local temp_char : Model?		= nil
+			local temp_ESAccessories:Folder?= nil
+			local temp_ESHair : Folder?		= nil
+			local temp_ESHeels : Folder?	= nil
+			local temp_ESSkirts : Folder?	= nil
+			local temp_ESWings : Folder?	= nil
+			-- This script could also support the legacy mermaid tails, but seemingly no one even uses them, so... Ehh.
+			
+			temp_char						= PlayerSelectParams.SelectedPlayer.Character
+			if not temp_char then return "Couldn't find that player's character model reference. Make sure they're visible/loaded." end
+			
+			AddListPart(
+				PlayerSelectParams.SelectedPlayer.Name .. " (" .. PlayerSelectParams.SelectedPlayer.DisplayName .. ")",
+				nil,
+				"Header"
+			)
+			AddListPart("Full character...", "🧑", "CharaRH", {}, PlayerSelectParams.SelectedPlayer)
+			
+			-- Next, index all of this player's currently-equipped RH clothes. Let's get references to the ES sub-folders first.
+			if TDStorage.RHRefs.EquippedStorage then
+				local temp_accessoryFolder:Folder?	= TDStorage.RHRefs.EquippedStorage:FindFirstChild("Accessories")
+				local temp_hairFolder : Folder?		= TDStorage.RHRefs.EquippedStorage:FindFirstChild("Hair")
+				local temp_heelFolder : Folder?		= TDStorage.RHRefs.EquippedStorage:FindFirstChild("Heels")
+				local temp_skirtFolder : Folder?	= TDStorage.RHRefs.EquippedStorage:FindFirstChild("Skirts")
+				local temp_wingFolder : Folder?		= TDStorage.RHRefs.EquippedStorage:FindFirstChild("Wings")
+				
+				-- If all of the folders exist (which they should unless RH changes something), proceed to reference Player sub-folders.
+				if temp_accessoryFolder and temp_hairFolder and temp_heelFolder and temp_skirtFolder and temp_wingFolder then
+					temp_ESAccessories				= temp_accessoryFolder:FindFirstChild(PlayerSelectParams.SelectedPlayer.Name)
+					temp_ESHair						= temp_hairFolder:FindFirstChild(PlayerSelectParams.SelectedPlayer.Name)
+					temp_ESHeels					= temp_heelFolder:FindFirstChild(PlayerSelectParams.SelectedPlayer.Name)
+					temp_ESSkirts					= temp_skirtFolder:FindFirstChild(PlayerSelectParams.SelectedPlayer.Name)
+					temp_ESWings					= temp_wingFolder:FindFirstChild(PlayerSelectParams.SelectedPlayer.Name)
+					
+					-- If we found all of this player's sub-folders, we can finally index their clothes!
+					if temp_ESAccessories and temp_ESHair and temp_ESHeels and temp_ESSkirts and temp_ESWings then
+						-- If they're using RH hair, shoes, and/or a skirt, list those first, as they can't use more than one of each.
+						-- Also, some hairstyles use meshes from the weird "ReplicatedHair" folder. They're named "HairLocal" instead.
+						local temp_hairModel:Model?	= temp_ESHair:FindFirstChild("Hair") or temp_ESHair:FindFirstChild("HairLocal")
+						if temp_hairModel then
+							AddListPart(
+								"Ha" .. temp_hairModel:FindFirstChild("Bangs") and "ir (w/ bangs)" or "ir",
+								"🪮",
+								"ItemRH",
+								{"Hair"},
+								PlayerSelectParams.SelectedPlayer
+							)
+						end
+						
+						if temp_ESHeels:FindFirstChild("Heels") and temp_ESHeels:FindFirstChild("Heels"):FindFirstChild("HeelName")
+						then
+							AddListPart(
+								temp_ESHeels:FindFirstChild("Heels"):FindFirstChild("HeelName").Value,
+								"👠",
+								"HeelsRH",
+								{temp_ESHeels:FindFirstChild("Heels"):FindFirstChild("HeelName").Value},
+								PlayerSelectParams.SelectedPlayer
+							)
+						end
+						
+						if temp_skirtFolder:FindFirstChild("Skirt") and temp_ESHeels:FindFirstChild("Skirt"):FindFirstChild("SkirtName")
+						then
+							AddListPart(
+								temp_ESHeels:FindFirstChild("Skirt"):FindFirstChild("SkirtName").Value,
+								"👗",
+								"ItemRH",
+								{"Skirts",temp_ESHeels:FindFirstChild("Skirt"):FindFirstChild("SkirtName").Value},
+								PlayerSelectParams.SelectedPlayer
+							)
+						end
+						
+						if temp_wingFolder:FindFirstChild("Wings") then
+							AddListPart(
+								"Wings",
+								"🪽",
+								"ItemRH",
+								{"Wings"},
+								PlayerSelectParams.SelectedPlayer
+							)
+						end
+						
+						if #temp_ESAccessories:GetChildren() > 0 then
+							AddListPart("Accessories (most clothes)", nil, "Header")
+							for _,item : Model in temp_ESAccessories:GetChildren() do
+								if item:IsA("Model") and item:FindFirstChild("AccessoryName") then
+									AddListPart(
+										item:FindFirstChild("AccessoryName").Value,
+										if item:FindFirstChild("AccessoryName").Value:find("Halo") then "😇" else "🎀",
+										"ItemRH",
+										{"Accessories",item:FindFirstChild("AccessoryName").Value},
+										PlayerSelectParams.SelectedPlayer
+									)	-- TODO: I believe this can detet all character parts, but please look over it and make sure nothing's missing before keeping this!
+								end
+							end
+						end
+					end
 				end
 			end
-			
 			return nil
 		end
 	},
@@ -1125,7 +1223,7 @@ local DetectTypeDefs : {ScanType}			= {
 			return nil
 		end
 	},
-	["GUI"]								= {
+	["GUI"]									= {
 		Title								= "GUI (PlayerGui)",
 		PlayerContext						= false,		-- Only the local player's GUI can be indexed and copied.
 		ContentType							= "2D",
@@ -1431,7 +1529,7 @@ local function SelectAndShowItem(_itemNum : number)
 			end
 			
 			-- Is this a RH-specific SaveType (ends in "RH")? Refresh its Instance references.
-			if ItemList[_itemNum].SaveType:sub(-3,-1) == "RH" then
+			if ItemList[_itemNum].SaveType:sub(-2,-1) == "RH" then
 				RefreshRHInstanceReferences()
 			end
 			
@@ -1523,7 +1621,6 @@ function AddListPart(_name:string,_icon:string,_type:string,_identifiers:{ValidI
 		newHeader.Parent					= GUI_ItemList
 	end
 	
-	task.wait()
 	return nil
 end
 
@@ -1685,7 +1782,7 @@ local function SaveItem(_fallbackCache : boolean, _override : boolean)
 	
 	local success, errormsg						= pcall(function()
 		-- Are we saving something from Royale High? All RH-specific SaveTypes end in those letters. If we are, refresh its references!
-		if ItemList[SelectedIndex].SaveType:sub(-3,-1) == "RH" then
+		if ItemList[SelectedIndex].SaveType:sub(-2,-1) == "RH" then
 			RefreshRHInstanceReferences()
 		end
 		
@@ -1764,7 +1861,7 @@ local function SaveItem(_fallbackCache : boolean, _override : boolean)
 	IsBusy = false
 	ChangeSaveButtonState(true)	-- We're done, so the save button should be safe to re-enable.
 	
-	if not success and errormsg and type(errormsg) == "string" and errormsg:len()>0 and errormsg:sub(1,2) ~= "x" then
+	if not success and errormsg and type(errormsg) == "string" and errormsg:len()>0 and errormsg:sub(1,1) ~= "x" then
 		DisplayToast("An error occurred while trying to save your target: " .. tostring(errormsg) or "[no error provided]", "🚫", 8.5)
 	end
 end
