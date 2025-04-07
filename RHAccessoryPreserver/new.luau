@@ -1,7 +1,7 @@
 --[[
 	ROYALE HIGH ACCESSORY PRESERVER V2		|
 	PROUDLY MADE BY XANE MYERS IN APRIL 2025|
-	LAST UPDATED APRIL 5TH, 2025			|
+	LAST UPDATED APRIL 7TH, 2025			|
 	----------------------------------------/
 	An amazing psuedo-sequel to an already powerful script, used for saving various (mostly 3D) assets from Roblox experiences,
 	including but no longer limited to Royale High! Run this script (preferably using Infinite Fun's 'rhsave' command) then tap
@@ -44,9 +44,8 @@
 	NOTE TO SELF TODO: Finish programming the ScanTypes and SaveTypes:
 	
 	ScanTypes:
-	•	CharaRH		Finds player characters like Chara, but uses the CharaRH SaveType. Also lists all of their equipped Dress Up items.
 	•	DormRH		Tries to find the active dorm, and allows the user to save the full room or any item in it, individually.
-	•	(DTI or It Girl character type?)
+	•	(DTI or It Girl character type that would replace WeldConstraints with Welds, trying to maintain offsets and links?)
 	
 	SaveTypes:
 	•	Tool		Clones a matching tool found in a player's Backpack, character model, or StarterPack.
@@ -1000,13 +999,23 @@ local PlaceOverrideData						= {
 	DETECTION/SCAN TYPES
 	This important array contains info about every scan type, a function and some metadata that determines the criteria it will
 	look for and add to the list in the target selection window. Some scan types require a player for context, and will switch
-	to the "PlaySel" definition with special logic before returning to the scheduled scan.
+	to the "I_Plyrs" definition with special logic before returning to the scheduled scan.
+	
+	Each ScanType includes 2 functions:
+	Scan				The main function, which searches for instances in any container, adding them to the list using
+						AddItem(). If this function returns a string, it will be used instead of the default "empty list"
+						message.
+	MissingItemResponse	Called when the user taps an item, but the SaveType doesn't return an Instance. This function can
+						remove any relevant/grouped items from the ItemList, though it should set the missing indices to
+						nil instead of using table.remove(), as each item tries to read its index, set when it's added to
+						the visible list.
 ]]
 type ScanType								= {
 	Title									: string,
 	ContentType								: "None"|"2D"|"3D",
 	PlayerContext							: boolean,
-	Scan									: () -> ()
+	Scan									: () -> (string?),
+	MissingItemResponse						: (_listIndex : number) -> ()
 }
 local DetectTypeDefs : {ScanType}			= {
 	--[[
@@ -1052,6 +1061,10 @@ local DetectTypeDefs : {ScanType}			= {
 			end
 			
 			return nil
+		end,
+		MissingItemResponse					= function(_listIndex : number)
+			ItemList[_listIndex].ListInstance:Destroy()	-- If a player's character can't be previewed outside RH, just remove their entry.
+			ItemList[_listIndex]			= nil
 		end
 	},
 	
@@ -1167,6 +1180,12 @@ local DetectTypeDefs : {ScanType}			= {
 				end
 			end
 			return nil
+		end,
+		MissingItemResponse					= function(_listIndex : number)
+			if _listIndex == 1 then	-- If the character itself couldn't be found, their clothes are gone too. Clear EVERYTHING.
+				DisplayToast(ItemList[1].Player and ItemList[1].Player.Name or "[Unknown]".."'s character was missing. Sorry!","🚫",3.333)
+				ClearList()
+			end	-- If anything else can't be found, just leave the entry in the list for now.
 		end
 	},
 	["Tools"]								= {
@@ -1221,6 +1240,32 @@ local DetectTypeDefs : {ScanType}			= {
 			end
 			
 			return nil
+		end,
+		MissingItemResponse					= function(_listIndex : number)
+			--[[
+				When a Tool can't be found, it's removed from the list, which can easily happen if the player (un)equips anything.
+				Since tools are grouped based on their container/location, this code tries to find the elements above and below
+				this one in the list, so it can delete the header if this was the last item in a section.
+			]]--
+			
+			local VisiblePosition			= ItemList[_listIndex].ListInstance.LayoutOrder
+			local Previous : TextButton?	= nil
+			local Next : TextButton?		= nil
+			for _,item : GuiObject in GUI_ItemList:GetChildren() do
+				if item.LayoutOrder == VisiblePosition + 1 then Next = item
+				elseif item.LayoutOrder == VisiblePosition - 1 then Previous = item
+				end
+				if Previous and Next then break end
+			end
+			
+			-- If this is the very last item, or it's surrounded by headers, it's the last item in this group, so remove the header above.
+			if Previous.Name:find("Header") and (not Next or (Next and Next.Name:find("Header"))) then
+				Previous:Destroy()
+			end
+			
+			-- Always remove this list item.
+			ItemList[_listIndex].ListInstance:Destroy()
+			ItemList[_listIndex]			= nil
 		end
 	},
 	["GUI"]									= {
@@ -1572,7 +1617,11 @@ local function SelectAndShowItem(_itemNum : number)
 				
 				ChangeSaveButtonState(true)	-- Since the content could be cloned, it should be safe to allow tapping the save buttons now.
 			else
-				DisplayToast("For some reason, the content you requested couldn't be cloned successfully...", "⚠️", 4.5)
+				-- If this ScanType has a function for removing useless list items when they aren't found, run it before showing a toast.
+				if DetectTypeDefs[LastScanType].MissingItemResponse then
+					DetectTypeDefs[LastScanType].MissingItemResponse(_itemNum)
+				end
+				DisplayToast("For some reason, the content you selected wasn't found. It may have been destroyed.", "⚠️", 5.25)
 			end
 		end
 	else
