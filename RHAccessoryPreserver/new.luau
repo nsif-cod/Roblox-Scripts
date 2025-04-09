@@ -1,7 +1,7 @@
 --[[
 	ROYALE HIGH ACCESSORY PRESERVER V2		|
 	PROUDLY MADE BY XANE MYERS IN APRIL 2025|
-	LAST UPDATED APRIL 7TH, 2025			|
+	LAST UPDATED APRIL 9TH, 2025			|
 	----------------------------------------/
 	An amazing psuedo-sequel to an already powerful script, used for saving various (mostly 3D) assets from Roblox experiences,
 	including but no longer limited to Royale High! Run this script (preferably using Infinite Fun's 'rhsave' command) then tap
@@ -15,14 +15,28 @@
 	Once you've saved everything you wanted (or start worrying you could get disconnected or kicked soon), you have a couple of
 	options to keep everything you took the time to copy/save:
 	
-	UNIVERSALSYNSAVEINSTANCE ('saveplace external' in Infinite Fun)
-	The easiest option, which I highly recommend! Run the script (use Infinite Fun to make it super easy, running that command)
+	1. INFINITE FUN & UNIVERSALSYNSAVEINSTANCE (HIGHLY RECOMMENDED AND SIMPLE)
+	Run this LoadString to launch Infinite Fun. (I recommend putting this in a file, then moving it to your executor's
+	"autoexec" folder so it always appears as you spawn into any game!)
+	
+	loadstring(game:HttpGet('https://raw.githubusercontent.com/Xane123/InfiniteFun_IY/master/source'))()
+	
+	When Infinite Fun's GUI appears, press the semicolon (;) key (on a computer) or tap the "IF" button (for mobile devices) to
+	make its "command line" appear. Write "saveplace external" (without the quotation marks) then press ENTER to launch
+	UniversalSynSaveInstance, which will do the rest of the work, putting everything in a large RBXLX file. When it's done
+	(check the white text in the upper-right corner of the screen), check your executor's workspace folder.
+	
+	Transfer the new RBXLX file to your computer and open it in Roblox Studio to check out the place/realm you saved. Anything
+	you saved using RH Accessory Preserver is placed in 💡Lighting, in the "Saved Items" folder.
+	
+	2. UNIVERSALSYNSAVEINSTANCE ('saveplace external' in Infinite Fun)
+	The easiest option, which I HIGHLY recommend! Run the script (use Infinite Fun to make it super easy, running that command)
 	then wait until the message in the top-right corner turns green and says that the file was written.
 	
 	From there, check your executor's workspace folder, transfer the RBXLX file to the computer, open it in Roblox Studio, then
 	check the Lighting service in the Explorer pane. Your saved items/models/GUI will be inside the "Saved Items" folder!
 	
-	XANE'S MODEL RECREATOR ('xmr' in Infinite Fun)
+	3. XANE'S MODEL RECREATOR ('xmr' in Infinite Fun)
 	Close RH Accessory Preserver then open Xane's Model Recreator. Tap the "select" button at the top of your screen, then tap
 	the "Lighting" button. When the list appears, select the "lighting" list item or the "Saved Items" folder by tapping on its
 	icon/emoji. Once the checkmark emoji appears, enter a name in the text box at the bottom, then tap the "save" button.
@@ -30,10 +44,12 @@
 	Unfortunately, this process isn't as quick as it could be. Install the "Xane's Asset Importer" plugin by following these
 	steps:
 	
-	1.	Download its RBXM file from [TODO: add the plugin's DL URL later].
+	1.	Download its RBXM file from this URL:
+		https://www.dropbox.com/scl/fi/xrv2mx9gpjlvks3vnisz4/XMDLRecreator_ImportTool.rbxm?rlkey=ltv22ona3z1r1uxz946zw9mdy&dl=1
 	2.	In Roblox Studio, open your Plugins Folder (in the new GUI, go to Plugins > Plugins Folder). Drag or move the RBXM file
 		into this folder.
-	3.	Close then re-open your current place/RBXL file; My plugin will create its own panel in your left sidebar.
+	3.	Close then re-open your current place/RBXL file. As your place opens, a new panel named "Xane's Asset Importer" should
+		appear, either in the middle of the screen or in your left sidebar.
 	4.	Check your executor's workspace folder, and transfer the JSON files with the name you entered in Xane's Model Recreator
 		to your computer.
 	5.	Open all of the files in a text editor, preferably one with tabs.
@@ -41,7 +57,9 @@
 		advancing through each #_piece#.json file.
 	7.	Customize your import, click the "start" button, then wait until your import is complete.
 	
-	NOTE TO SELF TODO: Finish programming the ScanTypes and SaveTypes:
+	DONE! Everything below this is just a personal note-to-self because my memory has become a complete JOKE in 2025...
+	
+	TODO: Finish programming the ScanTypes and SaveTypes:
 	
 	ScanTypes:
 	•	DormRH		Tries to find the active dorm, and allows the user to save the full room or any item in it, individually.
@@ -54,6 +72,10 @@
 	•	HeelsRH		Saves this Player's character model, then replaces their skin tone, name, and face with generic alternatives.
 	•	DormRH		Re-locates the loaded dorm room, then clones the full model.
 	•	FurniRH		Tries to find either an item with a matching debug ID or name within the loaded dorm, cloning and anonymizing it.
+	
+	LAST TODO: Continue working on the CharaRH SaveType. It's probably finished, and if so, try to start working on DormRH, the next type.
+	If you want more of a challenge, try adding the CharaRH, ItemRH, and HeelsRH SaveTypes, which will need ported v1 functions to work
+	and name the resulting cloned Model.
 ]]--
 
 if not game:IsLoaded() then game.Loaded:Wait() end
@@ -66,7 +88,8 @@ local StarterPack						= game:GetService("StarterPack")
 local TweenService						= game:GetService("TweenService")
 local Debris							= game:GetService("Debris")
 
-local CamScriptURL						= "https://raw.githubusercontent.com/Xane123/Roblox-Scripts/main/RHAccessoryPreserver/ModelViewerScript_forNew.luau"
+local CamScriptURL						=	-- URL for this script's "3D preview" camera script. Could be expanded to check 2 URLs.
+	"https://raw.githubusercontent.com/Xane123/Roblox-Scripts/main/RHAccessoryPreserver/new_camScript.luau"
 
 -- REFERENCES
 local LocalPlayer						= Players.LocalPlayer
@@ -92,7 +115,10 @@ _ = FindPlayerGui()
 local hiddenUI = get_hidden_gui or gethui
 if not hiddenUI then error("Your executor doesn't support hiding GUI's, so it's too unsafe to use this script. Sorry!") end
 
+-- CONSTANTS (PART 1, FOR GUI INITIALIZATION AND EXECUTION)
 local DEF_PREVIEW_MSG	= "Select an item from the left-side list to preview it here!"
+
+local COLOR_WHITE = Color3.new(1, 1, 1)
 
 --[[
 	Roblox2Lua
@@ -103,7 +129,7 @@ local DEF_PREVIEW_MSG	= "Select an item from the left-side list to preview it he
 ]]--
 
 --// Instances
-local temp_z_newGUI1 : Instance?		= nil	-- Temporary variables for GUI elements that aren't referenced in code after they're created.
+local temp_z_newGUI1 : Instance?		= nil	-- Temporary variables for GUI elements that aren't referenced in code after creation.
 local temp_z_newGUI2 : Instance?		= nil
 local temp_z_newGUI3 : Instance?		= nil
 
@@ -126,11 +152,9 @@ GUICarrier_Commands.Name = "CommandPalette"
 GUICarrier_Commands.Parent = GUI_Base
 
 temp_z_newGUI1 = Instance.new("Frame")
-temp_z_newGUI1.BackgroundColor3 = Color3.new(1, 1, 1)
 temp_z_newGUI1.BackgroundTransparency = 1
-temp_z_newGUI1.BorderColor3 = Color3.new(0, 0, 0)
 temp_z_newGUI1.BorderSizePixel = 0
-temp_z_newGUI1.Size = UDim2.new(1, 0, 0.774999976, 0)
+temp_z_newGUI1.Size = UDim2.fromScale(1, 0.775)
 temp_z_newGUI1.Visible = false
 temp_z_newGUI1.ZIndex = 0
 temp_z_newGUI1.Name = "DragBounds"
@@ -142,22 +166,20 @@ temp_z_newGUI2.BoundingUI = temp_z_newGUI1
 temp_z_newGUI2.DragRelativity = Enum.UIDragDetectorDragRelativity.Relative
 temp_z_newGUI2.DragSpace = Enum.UIDragDetectorDragSpace.LayerCollector
 temp_z_newGUI2.ResponseStyle = Enum.UIDragDetectorResponseStyle.Scale
-temp_z_newGUI2.SelectionModeDragSpeed = UDim2.new(0.15, 0, 0.2, 0)
+temp_z_newGUI2.SelectionModeDragSpeed = UDim2.fromScale(0.15, 0.2)
 temp_z_newGUI2.Parent = GUICarrier_Commands
 
 temp_z_newGUI1 = Instance.new("Frame")
-temp_z_newGUI1.BackgroundColor3 = Color3.new(1, 1, 1)
 temp_z_newGUI1.BackgroundTransparency = 1
-temp_z_newGUI1.BorderColor3 = Color3.new(0, 0, 0)
 temp_z_newGUI1.BorderSizePixel = 0
-temp_z_newGUI1.Size = UDim2.new(0.125, 0, 1, 0)
+temp_z_newGUI1.Size = UDim2.fromScale(0.125, 1)
 temp_z_newGUI1.Visible = true
 temp_z_newGUI1.Name = "FakeDragArea"
 temp_z_newGUI1.Parent = GUICarrier_Commands
 
 temp_z_newGUI2 = Instance.new("Frame")
-temp_z_newGUI2.AnchorPoint = Vector2.new(0.5, 0.5)
-temp_z_newGUI2.BackgroundColor3 = Color3.new(1, 1, 1)
+temp_z_newGUI2.AnchorPoint = Vector2.one / 2
+temp_z_newGUI2.BackgroundColor3 = COLOR_WHITE
 temp_z_newGUI2.BackgroundTransparency = 0.75
 temp_z_newGUI2.BorderSizePixel = 0
 temp_z_newGUI2.Position = UDim2.fromScale(0.167, 0.5)
@@ -172,8 +194,8 @@ temp_z_newGUI3.Name = "StripeCurve"
 temp_z_newGUI3.Parent = temp_z_newGUI2
 
 temp_z_newGUI2 = Instance.new("Frame")
-temp_z_newGUI2.AnchorPoint = Vector2.new(0.5, 0.5)
-temp_z_newGUI2.BackgroundColor3 = Color3.new(1, 1, 1)
+temp_z_newGUI2.AnchorPoint = Vector2.one / 2
+temp_z_newGUI2.BackgroundColor3 = COLOR_WHITE
 temp_z_newGUI2.BackgroundTransparency = 0.75
 temp_z_newGUI2.BorderSizePixel = 0
 temp_z_newGUI2.Position = UDim2.fromScale(0.333, 0.5)
@@ -199,7 +221,7 @@ temp_z_newGUI1.Parent = GUICarrier_Commands
 local Button_CloseCmd = Instance.new("TextButton")
 Button_CloseCmd.Font = Enum.Font.Ubuntu
 Button_CloseCmd.Text = "❌"
-Button_CloseCmd.TextColor3 = Color3.new(1, 1, 1)
+Button_CloseCmd.TextColor3 = COLOR_WHITE
 Button_CloseCmd.TextScaled = true
 Button_CloseCmd.TextStrokeTransparency = 0.5
 Button_CloseCmd.TextWrapped = true
@@ -228,13 +250,12 @@ temp_z_newGUI1.Parent = Button_CloseCmd
 local Button_ListCmd = Instance.new("TextButton")
 Button_ListCmd.Font = Enum.Font.Ubuntu
 Button_ListCmd.Text = "📃"
-Button_ListCmd.TextColor3 = Color3.new(1, 1, 1)
+Button_ListCmd.TextColor3 = COLOR_WHITE
 Button_ListCmd.TextScaled = true
 Button_ListCmd.TextStrokeTransparency = 0.5
 Button_ListCmd.TextWrapped = true
 Button_ListCmd.TextYAlignment = Enum.TextYAlignment.Bottom
 Button_ListCmd.BackgroundColor3 = Color3.new(0.5, 0.68225, 0.941175)
-Button_ListCmd.BorderColor3 = Color3.new(0, 0, 0)
 Button_ListCmd.BorderSizePixel = 0
 Button_ListCmd.LayoutOrder = 1
 Button_ListCmd.Size = UDim2.fromScale(0.333, 1)
@@ -258,13 +279,13 @@ temp_z_newGUI1.Parent = Button_ListCmd
 local Button_SaveCmd = Instance.new("TextButton")
 Button_SaveCmd.Font = Enum.Font.Ubuntu
 Button_SaveCmd.Text = "💾"
-Button_SaveCmd.TextColor3 = Color3.new(1, 1, 1)
+Button_SaveCmd.TextColor3 = COLOR_WHITE
 Button_SaveCmd.TextScaled = true
 Button_SaveCmd.TextStrokeTransparency = 0.5
 Button_SaveCmd.TextWrapped = true
 Button_SaveCmd.TextYAlignment = Enum.TextYAlignment.Bottom
 Button_SaveCmd.BackgroundColor3 = Color3.new(0.5, 0.68225, 0.941175)
-Button_SaveCmd.BorderColor3 = Color3.new(0, 0, 0)
+Button_SaveCmd.Active = false
 Button_SaveCmd.BorderSizePixel = 0
 Button_SaveCmd.LayoutOrder = 2
 Button_SaveCmd.Size = UDim2.fromScale(0.333, 1)
@@ -295,9 +316,7 @@ temp_z_newGUI1.Parent = GUICarrier_Commands
 
 local GUI_ToastBounds = Instance.new("Frame")
 GUI_ToastBounds.AnchorPoint = Vector2.new(1, 1)
-GUI_ToastBounds.BackgroundColor3 = Color3.new(1, 1, 1)
 GUI_ToastBounds.BackgroundTransparency = 1
-GUI_ToastBounds.BorderColor3 = Color3.new(0, 0, 0)
 GUI_ToastBounds.BorderSizePixel = 0
 GUI_ToastBounds.ClipsDescendants = true
 GUI_ToastBounds.Active = false
@@ -348,15 +367,14 @@ temp_z_newGUI1.Parent = Template_Toast
 temp_z_newGUI1 = Instance.new("TextLabel")
 temp_z_newGUI1.Font = Enum.Font.Highway
 temp_z_newGUI1.Text = "Placeholder message. (If you see this, please report it as an issue on GitHub: Xane123/Roblox-Scripts"
-temp_z_newGUI1.TextColor3 = Color3.new(1, 1, 1)
+temp_z_newGUI1.TextColor3 = COLOR_WHITE
 temp_z_newGUI1.TextSize = 15
 temp_z_newGUI1.TextTruncate = Enum.TextTruncate.AtEnd
 temp_z_newGUI1.TextWrapped = true
 temp_z_newGUI1.TextXAlignment = Enum.TextXAlignment.Left
 temp_z_newGUI1.AutomaticSize = Enum.AutomaticSize.XY
-temp_z_newGUI1.BackgroundColor3 = Color3.new(1, 1, 1)
+temp_z_newGUI1.BackgroundColor3 = COLOR_WHITE
 temp_z_newGUI1.BackgroundTransparency = 1
-temp_z_newGUI1.BorderColor3 = Color3.new(0, 0, 0)
 temp_z_newGUI1.BorderSizePixel = 0
 temp_z_newGUI1.Size = UDim2.new(1, 0, 0, 15)
 temp_z_newGUI1.Visible = true
@@ -366,15 +384,12 @@ temp_z_newGUI1.Parent = Template_Toast
 temp_z_newGUI1 = Instance.new("TextButton")
 temp_z_newGUI1.Font = Enum.Font.Highway
 temp_z_newGUI1.Text = "⛔"
-temp_z_newGUI1.TextColor3 = Color3.new(1, 1, 1)
+temp_z_newGUI1.TextColor3 = COLOR_WHITE
 temp_z_newGUI1.TextScaled = true
-temp_z_newGUI1.TextSize = 14
 temp_z_newGUI1.TextWrapped = true
-temp_z_newGUI1.BackgroundColor3 = Color3.new(1, 1, 1)
 temp_z_newGUI1.BackgroundTransparency = 1
-temp_z_newGUI1.BorderColor3 = Color3.new(0, 0, 0)
 temp_z_newGUI1.BorderSizePixel = 0
-temp_z_newGUI1.Size = UDim2.new(0, 15, 0, 15)
+temp_z_newGUI1.Size = UDim2.fromOffset(15, 15)
 temp_z_newGUI1.SizeConstraint = Enum.SizeConstraint.RelativeYY
 temp_z_newGUI1.Visible = true
 temp_z_newGUI1.Name = "Icon"
@@ -382,9 +397,8 @@ temp_z_newGUI1.Parent = Template_Toast
 
 local GUI_Window = Instance.new("Frame")
 GUI_Window.Active = true
-GUI_Window.AnchorPoint = Vector2.new(0.5, 0.5)
+GUI_Window.AnchorPoint = Vector2.one / 2
 GUI_Window.BackgroundColor3 = Color3.new(0.180392, 0.180392, 0.196078)
-GUI_Window.BorderColor3 = Color3.new(0, 0, 0)
 GUI_Window.BorderSizePixel = 0
 GUI_Window.Position = UDim2.new(0.5, 0, 0.5, 0)
 GUI_Window.Size = UDim2.new(0.725000024, 0, 0.899999976, 0)
@@ -400,14 +414,13 @@ temp_z_newGUI2.Parent = GUI_Window
 temp_z_newGUI2 = Instance.new("TextLabel")
 temp_z_newGUI2.Font = Enum.Font.FredokaOne
 temp_z_newGUI2.Text = "📦 Target Selector"
-temp_z_newGUI2.TextColor3 = Color3.new(1, 1, 1)
+temp_z_newGUI2.TextColor3 = COLOR_WHITE
 temp_z_newGUI2.TextScaled = true
 temp_z_newGUI2.TextStrokeTransparency = 0.6
 temp_z_newGUI2.TextWrapped = true
 temp_z_newGUI2.TextXAlignment = Enum.TextXAlignment.Left
-temp_z_newGUI2.AnchorPoint = Vector2.new(0.5, 0)
+temp_z_newGUI2.AnchorPoint = Vector2.xAxis / 2
 temp_z_newGUI2.BackgroundColor3 = Color3.new(0.686275, 0.678431, 0.658824)
-temp_z_newGUI2.BorderColor3 = Color3.new(0, 0, 0)
 temp_z_newGUI2.BorderSizePixel = 0
 temp_z_newGUI2.Position = UDim2.new(0.5, 0, 0, 0)
 temp_z_newGUI2.Size = UDim2.new(1, 0, 0, 30)
@@ -420,7 +433,7 @@ temp_z_newGUI3.CornerRadius = UDim.new(0, 15)
 temp_z_newGUI3.Parent = temp_z_newGUI2
 
 temp_z_newGUI3 = Instance.new("UIGradient")
-temp_z_newGUI3.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.new(0.396078, 0.607843, 1)), ColorSequenceKeypoint.new(1, Color3.new(1, 0.741176, 0.482353))})
+temp_z_newGUI3.Color = ColorSequence.new(Color3.new(0.396078, 0.607843, 1), Color3.new(1, 0.741176, 0.482353))
 temp_z_newGUI3.Name = "WindowTitleGradient"
 temp_z_newGUI3.Parent = temp_z_newGUI2
 
@@ -436,12 +449,10 @@ Button_CloseWindow.Font = Enum.Font.FredokaOne
 Button_CloseWindow.Text = "X"
 Button_CloseWindow.TextColor3 = Color3.new(0.490196, 0.188235, 0.0862745)
 Button_CloseWindow.TextScaled = true
-Button_CloseWindow.TextSize = 14
-Button_CloseWindow.TextStrokeColor3 = Color3.new(0.490196, 0.188235, 0.0862745)
+Button_CloseWindow.TextStrokeColor3 = Button_CloseWindow.TextColor3
 Button_CloseWindow.TextWrapped = true
 Button_CloseWindow.AnchorPoint = Vector2.new(1, 0.5)
 Button_CloseWindow.BackgroundColor3 = Color3.new(1, 0.529412, 0.294118)
-Button_CloseWindow.BorderColor3 = Color3.new(0, 0, 0)
 Button_CloseWindow.BorderSizePixel = 0
 Button_CloseWindow.Position = UDim2.new(1, 2, 0.5, 0)
 Button_CloseWindow.Size = UDim2.new(1, 2, 1, 2)
@@ -467,12 +478,13 @@ local GUI_GroupNameBox = Instance.new("TextBox")
 GUI_GroupNameBox.Font = Enum.Font.FredokaOne
 GUI_GroupNameBox.PlaceholderText = "Custom folder name for saved items..."
 GUI_GroupNameBox.Text = ""
-GUI_GroupNameBox.TextColor3 = Color3.new(0.490196, 0.188235, 0.0862745)
+GUI_GroupNameBox.TextColor3 = Color3.fromRGB(56, 72, 120)
 GUI_GroupNameBox.PlaceholderColor3 = Color3.fromRGB(85, 58, 58)
 GUI_GroupNameBox.TextScaled = true
 GUI_GroupNameBox.TextWrapped = true
 GUI_GroupNameBox.AnchorPoint = Vector2.new(1, 0.5)
-GUI_GroupNameBox.BackgroundColor3 = Color3.new(1, 0.529412, 0.294118)
+GUI_GroupNameBox.BackgroundColor3 = COLOR_WHITE
+GUI_GroupNameBox.BackgroundTransparency = 0.725
 GUI_GroupNameBox.BorderSizePixel = 0
 GUI_GroupNameBox.Position = UDim2.new(0.9425, 2, 0.5, 0)
 GUI_GroupNameBox.Size = UDim2.new(10, 2, 1, 2)
@@ -491,7 +503,7 @@ temp_z_newGUI3.Parent = GUI_GroupNameBox
 
 local GUI_WinContents = Instance.new("Frame")
 GUI_WinContents.AnchorPoint = Vector2.new(0.5, 1)
-GUI_WinContents.BackgroundColor3 = Color3.new(1, 1, 1)
+GUI_WinContents.BackgroundColor3 = COLOR_WHITE
 GUI_WinContents.BackgroundTransparency = 1
 GUI_WinContents.BorderSizePixel = 0
 GUI_WinContents.Position = UDim2.new(0.5, 0, 1, -7)
@@ -503,16 +515,15 @@ GUI_WinContents.Parent = GUI_Window
 -- First half of text shown in the window. This guides the player through each step (selecting a category, item, then saving it).
 local GUIText_Part1 = Instance.new("TextLabel")
 GUIText_Part1.Font = Enum.Font.Highway
-GUIText_Part1.Text = "Please tap a 'type' from the top row, then tap the character/item you would like to save. You can preview it in the 3D area or click either save button to add it to Lighting."
-GUIText_Part1.TextColor3 = Color3.new(1, 1, 1)
+GUIText_Part1.Text = "Please tap a 'type' from the top row, then tap the character/item you would like to save." ..
+	" You can preview it in the 3D area or click either save button to add it to Lighting."
+GUIText_Part1.TextColor3 = COLOR_WHITE
 GUIText_Part1.TextSize = 13
 GUIText_Part1.TextTruncate = Enum.TextTruncate.AtEnd
 GUIText_Part1.TextWrapped = true
 GUIText_Part1.TextXAlignment = Enum.TextXAlignment.Left
 GUIText_Part1.TextYAlignment = Enum.TextYAlignment.Top
-GUIText_Part1.BackgroundColor3 = Color3.new(1, 1, 1)
 GUIText_Part1.BackgroundTransparency = 1
-GUIText_Part1.BorderColor3 = Color3.new(0, 0, 0)
 GUIText_Part1.BorderSizePixel = 0
 GUIText_Part1.Size = UDim2.new(1, 0, 0.100000001, 0)
 GUIText_Part1.Visible = true
@@ -523,13 +534,12 @@ GUIText_Part1.Parent = GUI_WinContents
 local GUIText_Part2 = Instance.new("TextLabel")
 GUIText_Part2.Font = Enum.Font.Highway
 GUIText_Part2.Text = ""
-GUIText_Part2.TextColor3 = Color3.new(1, 1, 1)
+GUIText_Part2.TextColor3 = COLOR_WHITE
 GUIText_Part2.TextSize = 13
 GUIText_Part2.TextTruncate = Enum.TextTruncate.AtEnd
 GUIText_Part2.TextWrapped = true
 GUIText_Part2.TextXAlignment = Enum.TextXAlignment.Left
 GUIText_Part2.TextYAlignment = Enum.TextYAlignment.Top
-GUIText_Part2.BackgroundColor3 = Color3.new(1, 1, 1)
 GUIText_Part2.BackgroundTransparency = 1
 GUIText_Part2.BorderSizePixel = 0
 GUIText_Part2.Position = UDim2.fromScale(0, 0.1)
@@ -563,13 +573,12 @@ temp_z_newGUI1.Parent = GUI_ItemList
 local Template_Header = Instance.new("TextLabel")
 Template_Header.Font = Enum.Font.FredokaOne
 Template_Header.Text = "Accessories"
-Template_Header.TextColor3 = Color3.new(1, 1, 1)
+Template_Header.TextColor3 = COLOR_WHITE
 Template_Header.TextScaled = true
 Template_Header.TextSize = 14
 Template_Header.TextWrapped = true
-Template_Header.BackgroundColor3 = Color3.new(1, 1, 1)
+Template_Header.BackgroundColor3 = COLOR_WHITE
 Template_Header.BackgroundTransparency = 0.875
-Template_Header.BorderColor3 = Color3.new(1, 1, 1)
 Template_Header.BorderSizePixel = 0
 Template_Header.LayoutOrder = 1
 Template_Header.Size = UDim2.new(1, 0, 0, 15)
@@ -595,11 +604,8 @@ temp_z_newGUI1.Font = Enum.Font.Highway
 temp_z_newGUI1.Text = "🙍"
 temp_z_newGUI1.TextColor3 = Color3.new(1, 0.964706, 0.862745)
 temp_z_newGUI1.TextScaled = true
-temp_z_newGUI1.TextSize = 14
-temp_z_newGUI1.TextWrapped = true
-temp_z_newGUI1.BackgroundColor3 = Color3.new(0.352941, 0.623529, 1)
+temp_z_newGUI1.TextWrapped = true 
 temp_z_newGUI1.BackgroundTransparency = 1
-temp_z_newGUI1.BorderColor3 = Color3.new(0, 0, 0)
 temp_z_newGUI1.BorderSizePixel = 0
 temp_z_newGUI1.Selectable = true
 temp_z_newGUI1.Size = UDim2.new(0, 25, 0, 25)
@@ -609,15 +615,12 @@ temp_z_newGUI1.Parent = Template_Item
 
 temp_z_newGUI1 = Instance.new("TextLabel")
 temp_z_newGUI1.Font = Enum.Font.Highway
-temp_z_newGUI1.Text = "Placeholder. SHOULDN'T BE SEEN BY THE USER!"
+temp_z_newGUI1.Text = "Untitled (placeholder not meant to be seen by the user)"
 temp_z_newGUI1.TextColor3 = Color3.new(1, 0.964706, 0.862745)
 temp_z_newGUI1.TextScaled = true
-temp_z_newGUI1.TextSize = 14
 temp_z_newGUI1.TextWrapped = true
 temp_z_newGUI1.TextXAlignment = Enum.TextXAlignment.Left
-temp_z_newGUI1.BackgroundColor3 = Color3.new(0.352941, 0.623529, 1)
 temp_z_newGUI1.BackgroundTransparency = 1
-temp_z_newGUI1.BorderColor3 = Color3.new(0, 0, 0)
 temp_z_newGUI1.BorderSizePixel = 0
 temp_z_newGUI1.LayoutOrder = 1
 temp_z_newGUI1.Position = UDim2.new(0, 25, 0, 0)
@@ -640,7 +643,7 @@ GUI_Viewer3D.Name = "PreviewModel"
 GUI_Viewer3D.Parent = GUI_WinContents
 
 local GUI_ModelViewer = Instance.new("WorldModel")
-GUI_ModelViewer.WorldPivot = CFrame.fromMatrix(Vector3.new(0, 45.256961822509766, 0), Vector3.new(1, 0, 0), Vector3.new(0, 1, 0), Vector3.new(0, 0, 1))
+GUI_ModelViewer.WorldPivot = CFrame.fromMatrix(Vector3.yAxis*45.256961822509766,Vector3.xAxis,Vector3.yAxis,Vector3.zAxis)
 GUI_ModelViewer.Parent = GUI_Viewer3D
 
 temp_z_newGUI2 = Instance.new("UICorner")
@@ -651,7 +654,7 @@ temp_z_newGUI2.Parent = GUI_Viewer3D
 local GUI_ViewerMessage = Instance.new("TextLabel")
 GUI_ViewerMessage.Font = Enum.Font.Highway
 GUI_ViewerMessage.Text = ""
-GUI_ViewerMessage.TextColor3 = Color3.new(1, 1, 1)
+GUI_ViewerMessage.TextColor3 = COLOR_WHITE
 GUI_ViewerMessage.TextScaled = true
 GUI_ViewerMessage.TextStrokeTransparency = 0
 GUI_ViewerMessage.TextWrapped = true
@@ -719,7 +722,7 @@ GUI_DetectTypeList = Instance.new("Frame")
 GUI_DetectTypeList.BackgroundColor3 = Color3.new(0.352941, 0.376471, 0.45098)
 GUI_DetectTypeList.BackgroundTransparency = 1
 GUI_DetectTypeList.BorderSizePixel = 0
-GUI_DetectTypeList.Position = UDim2.new(0, 0, 0.200000003, 0)
+GUI_DetectTypeList.Position = UDim2.fromScale(0, 0.2)
 GUI_DetectTypeList.Size = UDim2.new(0.6, -3, 0.1, -3)
 GUI_DetectTypeList.Visible = true
 GUI_DetectTypeList.Name = "Types"
@@ -754,7 +757,6 @@ temp_z_newGUI1.Parent = Template_DetectType
 
 local GUI_EmptyItemListText = Instance.new("TextLabel")
 GUI_EmptyItemListText.Font = Enum.Font.Highway
--- GUI_EmptyItemListText.Text = "Please choose a category above to begin."
 GUI_EmptyItemListText.TextColor3 = Color3.new(1, 0.976471, 0.901961)
 GUI_EmptyItemListText.TextScaled = true
 GUI_EmptyItemListText.TextWrapped = true
@@ -808,7 +810,7 @@ Button_SaveWindow.TextWrapped = true
 Button_SaveWindow.BackgroundColor3 = Color3.new(0.537255, 0.627451, 0.921569)
 Button_SaveWindow.BorderSizePixel = 0
 Button_SaveWindow.Size = UDim2.new(1, 0, 1, 0)
-Button_SaveWindow.Visible = true
+Button_SaveWindow.Visible = false
 Button_SaveWindow.Name = "Save"
 Button_SaveWindow.Parent = temp_z_newGUI1
 
@@ -824,7 +826,6 @@ Button_RefreshWindow.TextSize = 14
 Button_RefreshWindow.TextStrokeTransparency = 0.25
 Button_RefreshWindow.TextWrapped = true
 Button_RefreshWindow.BackgroundColor3 = Color3.new(0.537255, 0.627451, 0.921569)
-Button_RefreshWindow.BorderColor3 = Color3.new(0, 0, 0)
 Button_RefreshWindow.BorderSizePixel = 0
 Button_RefreshWindow.LayoutOrder = 1
 Button_RefreshWindow.Size = UDim2.new(1, 0, 1, 0)
