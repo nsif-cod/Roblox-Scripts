@@ -1137,7 +1137,7 @@ local DetectTypeDefs : {ScanType}			= {
 						local temp_hairModel:Model?	= temp_ESHair:FindFirstChild("Hair") or temp_ESHair:FindFirstChild("HairLocal")
 						if temp_hairModel then
 							AddListPart(
-								"Ha" .. temp_hairModel:FindFirstChild("Bangs") and "ir (w/ bangs)" or "ir",
+								"Hair",
 								"🪮",
 								"ItemRH",
 								{"Hair"},
@@ -1149,28 +1149,28 @@ local DetectTypeDefs : {ScanType}			= {
 						if temp_ESHeels:FindFirstChild("Heels") and temp_ESHeels:FindFirstChild("Heels"):FindFirstChild("HeelName")
 						then
 							AddListPart(
-								temp_ESHeels:FindFirstChild("Heels"):FindFirstChild("HeelName").Value,
+								"Heels",	-- temp_ESHeels:FindFirstChild("Heels"):FindFirstChild("HeelName").Value,
 								"👠",
 								"HeelsRH",
-								{temp_ESHeels:FindFirstChild("Heels"):FindFirstChild("HeelName").Value},
+								{},	-- temp_ESHeels:FindFirstChild("Heels"):FindFirstChild("HeelName").Value},
 								PlayerSelectParams.SelectedPlayer
 							)
 						else warn("No heels/shoes were found...")
 						end
 						
-						if temp_skirtFolder:FindFirstChild("Skirt") and temp_ESHeels:FindFirstChild("Skirt"):FindFirstChild("SkirtName")
+						if temp_ESSkirts:FindFirstChild("Skirt") and temp_ESSkirts:FindFirstChild("Skirt"):FindFirstChild("SkirtName")
 						then
 							AddListPart(
-								temp_ESHeels:FindFirstChild("Skirt"):FindFirstChild("SkirtName").Value,
+								"Skirt",	-- temp_ESSkirts:FindFirstChild("Skirt"):FindFirstChild("SkirtName").Value,
 								"👗",
 								"ItemRH",
-								{"Skirts",temp_ESHeels:FindFirstChild("Skirt"):FindFirstChild("SkirtName").Value},
+								{"Skirts"},	-- ,temp_ESSkirts:FindFirstChild("Skirt"):FindFirstChild("SkirtName").Value},
 								PlayerSelectParams.SelectedPlayer
 							)
 						else warn("No skirt was found...")
 						end
 						
-						if temp_wingFolder:FindFirstChild("Wings") then
+						if temp_ESWings:FindFirstChild("Wings") then
 							AddListPart(
 								"Wings",
 								"🪽",
@@ -1192,6 +1192,7 @@ local DetectTypeDefs : {ScanType}			= {
 										{"Accessories",item:FindFirstChild("AccessoryName").Value},
 										PlayerSelectParams.SelectedPlayer
 									)	-- TODO: I believe this can detect all character parts, but please look over it and make sure nothing's missing before keeping this!
+								else warn(item.Name .. " isn't a standard Accessory, apparently.")
 								end
 							end
 						else warn("NO ACCESSORIES? What's going on?")
