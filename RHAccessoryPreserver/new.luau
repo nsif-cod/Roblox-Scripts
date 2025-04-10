@@ -1109,18 +1109,20 @@ local DetectTypeDefs : {ScanType}			= {
 			)
 			AddListPart("Full character...", "🧑", "CharaRH", {}, PlayerSelectParams.SelectedPlayer)
 			
-			TDStorage.RHRefs.EquippedStorage = workspace:FindFirstChild("EquippedStorage")
+			local EquippedStorage:Folder?	= workspace:FindFirstChild("EquippedStorage")
 			
 			-- Next, index all of this player's currently-equipped RH clothes. Let's get references to the ES sub-folders first.
-			if TDStorage and TDStorage.RHRefs and TDStorage.RHRefs.EquippedStorage then
-				local temp_accessoryFolder:Folder?	= TDStorage.RHRefs.EquippedStorage:FindFirstChild("Accessories")
-				local temp_hairFolder : Folder?		= TDStorage.RHRefs.EquippedStorage:FindFirstChild("Hair")
-				local temp_heelFolder : Folder?		= TDStorage.RHRefs.EquippedStorage:FindFirstChild("Heels")
-				local temp_skirtFolder : Folder?	= TDStorage.RHRefs.EquippedStorage:FindFirstChild("Skirts")
-				local temp_wingFolder : Folder?		= TDStorage.RHRefs.EquippedStorage:FindFirstChild("Wings")
+			if EquippedStorage then
+				print("Found EquippedStorage folder! Attempting to find this player's clothes and stuff now!")
+				local temp_accessoryFolder:Folder?	= EquippedStorage:FindFirstChild("Accessories")
+				local temp_hairFolder : Folder?		= EquippedStorage:FindFirstChild("Hair")
+				local temp_heelFolder : Folder?		= EquippedStorage:FindFirstChild("Heels")
+				local temp_skirtFolder : Folder?	= EquippedStorage:FindFirstChild("Skirts")
+				local temp_wingFolder : Folder?		= EquippedStorage:FindFirstChild("Wings")
 				
 				-- If all of the folders exist (which they should unless RH changes something), proceed to reference Player sub-folders.
 				if temp_accessoryFolder and temp_hairFolder and temp_heelFolder and temp_skirtFolder and temp_wingFolder then
+					print("Okay, we have everything. Going through each sub-folder now...")
 					temp_ESAccessories				= temp_accessoryFolder:FindFirstChild(PlayerSelectParams.SelectedPlayer.Name)
 					temp_ESHair						= temp_hairFolder:FindFirstChild(PlayerSelectParams.SelectedPlayer.Name)
 					temp_ESHeels					= temp_heelFolder:FindFirstChild(PlayerSelectParams.SelectedPlayer.Name)
@@ -1189,15 +1191,17 @@ local DetectTypeDefs : {ScanType}			= {
 							end
 						end
 					end
+				else
+					warn("One of this character's folders didn't exist!")
+					print(tostring(temp_accessoryFolder))
+					print(tostring(temp_hairFolder))
+					print(tostring(temp_heelFolder))
+					print(tostring(temp_skirtFolder))
+					print(tostring(temp_wingFolder))
 				end
 			else
-				warn("Something isn't right here... Is our EquippedStorage reference correct?")
-				print(TDStorage)
-				print(TDStorage.RHRefs)
-				print(tostring(TDStorage.RHRefs.EquippedStorage))
-				print(TDStorage.RHRefs.EquippedStorage:GetFullName())
-				print(TDStorage.RHRefs.GUIBase_Clothing:GetFullName())
-				print(TDStorage.RHRefs.GUIBase_Furniture:GetFullName())
+				warn("WHERE IS EQUIPPED STORAGE?")
+				print(tostring(EquippedStorage))
 			end
 			return nil
 		end,
