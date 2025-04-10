@@ -845,7 +845,7 @@ temp_z_newGUI2.Parent = Button_RefreshWindow
 ]]--
 local GUI_CurrentCache						= Instance.new("Folder")
 GUI_CurrentCache.Name						= "PreviewContent"
-GUI_CurrentCache.Parent						= GUI_Base
+-- GUI_CurrentCache.Parent					= GUI_Base
 
 local function TryOrCreateFolder(_parent : Instance, _name : string) : Folder
 	local FolderRef : Folder?	= _parent:FindFirstChild(_name)
@@ -1657,7 +1657,7 @@ end
 ]]--
 local function SelectAndShowItem(_itemNum : number)
 	ChangeSaveButtonState(false)	-- Disable the save button until the selected item is cloned/displayed successfully.
-	if _itemNum and _itemNum > 0 and _itemNum < #ItemList then
+	if _itemNum and _itemNum > 0 and _itemNum <= #ItemList then
 		if ItemList[_itemNum].SaveType == "I_Plyrs" then	-- If picking a player HACKISHLY, update SelectedPlayer then start a new scan.
 			local temp_player : Player? = Players:FindFirstChild(ItemList[_itemNum].Identifiers[1])
 			if temp_player then
