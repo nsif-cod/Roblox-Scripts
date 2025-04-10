@@ -559,8 +559,8 @@ GUI_ItemList.Active = true
 GUI_ItemList.AnchorPoint = Vector2.yAxis
 GUI_ItemList.BackgroundColor3 = Color3.new(0.313726, 0.305882, 0.301961)
 GUI_ItemList.BorderSizePixel = 0
-GUI_ItemList.Position = UDim2.new(0, 0, 1, 0)
-GUI_ItemList.Size = UDim2.new(0.6, -3, 0.7, 0)
+GUI_ItemList.Position = UDim2.fromScale(0, 0.925)
+GUI_ItemList.Size = UDim2.new(0.6, -3, 0.625, 0)
 GUI_ItemList.Visible = true
 GUI_ItemList.Name = "List"
 GUI_ItemList.Parent = GUI_WinContents
@@ -1023,6 +1023,7 @@ local PlaceOverrideData						= {
 type ScanType								= {
 	Title									: string,
 	ContentType								: "None"|"2D"|"3D",
+	Position								: number,
 	PlayerContext							: boolean,
 	Scan									: () -> (string?),
 	MissingItemResponse						: (_listIndex : number) -> ()
@@ -1037,8 +1038,9 @@ local DetectTypeDefs : {ScanType}			= {
 		This type doesn't include a "missing item" function because that's handled by the item-selection function's hardcoded check.
 	]]--
 	["I_Plyrs"]								= {
-		Title								= "Players (internal)",
+		-- Title							= "Players (internal)",
 		PlayerContext						= false,	-- Obviously, this can't be true or…it would probably cause an infinite loop.
+		Position							= 1000,
 		ContentType							= "None",
 		Scan								= function()
 			AddListPart("Select a player!", nil, "Header")
@@ -1051,7 +1053,7 @@ local DetectTypeDefs : {ScanType}			= {
 	},
 	
 	--[[
-		Char (Standard Roblox characters)
+		Chara (Standard Roblox characters)
 		Finds all standard R6/R15 Roblox characters controlled by players (linked in their Character properties). Since some games
 		like Royale High put their extra models in another location (like RH's EquippedStorage sub-folders), this type gets
 		replaced in games with more complex or non-standard characters. (This will probably still break in games where players
@@ -1059,8 +1061,9 @@ local DetectTypeDefs : {ScanType}			= {
 		similar to a Robloxian, or be prepared to close the Roblox app before using this scan type.
 	]]--
 	["Chara"]								= {
-		Title								= "Characters",
+		Title								= "🧑People",
 		PlayerContext						= false,		-- Each player will only add one entry to the list, so they're all listed.
+		Position							= 1,
 		ContentType							= "3D",
 		Scan								= function()
 			for _,player in Players:GetPlayers() do
@@ -1079,15 +1082,16 @@ local DetectTypeDefs : {ScanType}			= {
 	},
 	
 	--[[
-		CharRH (Royale High player characters)
+		CharaRH (Royale High player characters)
 		Makes it easy and convenient to save any player's character or any of their equipped items in Royale High. After selecting a
 		player, all of their items and character model will be listed, including an item they may be trying on in the shop! This
 		ScanType makes saving any shop item trivial! Try on your desired item, refresh the list/select yourself, find the item in the
 		list, then you can rapidly save toggles and variations by tapping the save button as soon as your clothes update!
 	]]--
 	["CharaRH"]								= {
-		Title								= "Characters (RH)",
-		PlayerContext						= true,		-- Each player will display all of their clothing items and their character.
+		Title								= "💃People",
+		PlayerContext						= true,	-- Each player will display all of their clothing items and their character.
+		Position							= 1,	-- In RH, this replaces "Chara", so it should appear first, just like it.
 		ContentType							= "3D",
 		Scan								= function()
 			-- First, try to get references to all of this player's folders (their character and EquippedStorage sub-folders)
@@ -1143,42 +1147,48 @@ local DetectTypeDefs : {ScanType}			= {
 								{"Hair"},
 								PlayerSelectParams.SelectedPlayer
 							)
-						else warn("No hair was found...")
+						else print("No hair was found...")
 						end
 						
 						if temp_ESHeels:FindFirstChild("Heels") and temp_ESHeels:FindFirstChild("Heels"):FindFirstChild("HeelName")
 						then
 							AddListPart(
-								"Heels",	-- temp_ESHeels:FindFirstChild("Heels"):FindFirstChild("HeelName").Value,
+								temp_ESHeels:FindFirstChild("Heels") and
+									temp_ESHeels:FindFirstChild("Heels"):FindFirstChild("HeelName") and
+									temp_ESHeels:FindFirstChild("Heels"):FindFirstChild("HeelName").Value or
+									"Heels or Shoes",
 								"👠",
 								"HeelsRH",
 								{},	-- temp_ESHeels:FindFirstChild("Heels"):FindFirstChild("HeelName").Value},
 								PlayerSelectParams.SelectedPlayer
 							)
-						else warn("No heels/shoes were found...")
+						else print("No heels/shoes were found...")
 						end
 						
 						if temp_ESSkirts:FindFirstChild("Skirt") and temp_ESSkirts:FindFirstChild("Skirt"):FindFirstChild("SkirtName")
 						then
 							AddListPart(
-								"Skirt",	-- temp_ESSkirts:FindFirstChild("Skirt"):FindFirstChild("SkirtName").Value,
+								temp_ESSkirts:FindFirstChild("Skirt") and
+									temp_ESSkirts:FindFirstChild("Skirt"):FindFirstChild("SkirtName") and
+									temp_ESSkirts:FindFirstChild("Skirt"):FindFirstChild("SkirtName").Value or
+									"Skirt",
 								"👗",
 								"ItemRH",
 								{"Skirts"},	-- ,temp_ESSkirts:FindFirstChild("Skirt"):FindFirstChild("SkirtName").Value},
 								PlayerSelectParams.SelectedPlayer
 							)
-						else warn("No skirt was found...")
+						else print("No skirt was found...")
 						end
 						
 						if temp_ESWings:FindFirstChild("Wings") then
 							AddListPart(
 								"Wings",
-								"🪽",
+								"⚪",
 								"ItemRH",
 								{"Wings"},
 								PlayerSelectParams.SelectedPlayer
 							)
-						else print("No wings were found (but this player might not have any equipped)...")
+						else print("No wings were found...")
 						end
 						
 						if #temp_ESAccessories:GetChildren() > 0 then
@@ -1233,8 +1243,9 @@ local DetectTypeDefs : {ScanType}			= {
 		if planning to save different variation and toggle combinations.
 	]]--
 	["DormRH"]								= {
-		Title								= "Active Dorm",
+		Title								= "🏠Dorm",
 		PlayerContext						= false,	-- A single dorm is loaded at any time, so there's no point in checking a Player.
+		Position							= 2,
 		ContentType							= "3D",
 		Scan								= function()
 			-- Find a Part with a numerical name that contains an "InnerDorm" model. This doesn't exist unless a dorm is loaded, our goal.
@@ -1326,8 +1337,9 @@ local DetectTypeDefs : {ScanType}			= {
 		StarterPack (which isn't player-specific).
 	]]--
 	["Tools"]								= {
-		Title								= "Tools",
+		Title								= "🔨Tools",
 		PlayerContext						= true,		-- Each player will only add one entry to the list, so they're all listed.
+		Position							= 10,
 		ContentType							= "3D",
 		Scan								= function()
 			if PlayerSelectParams.SelectedPlayer then
@@ -1406,8 +1418,9 @@ local DetectTypeDefs : {ScanType}			= {
 		end
 	},
 	["GUI"]									= {
-		Title								= "GUI (PlayerGui)",
+		Title								= "🪟GUIs",
 		PlayerContext						= false,		-- Only the local player's GUI can be indexed and copied.
+		Position							= 20,
 		ContentType							= "2D",
 		Scan								= function()
 			if not PlayerGui then return "Your PlayerGui container doesn't exist. Wait until the game's GUI appears then try again." end
@@ -1588,7 +1601,7 @@ local SaveTypeDefs : {SaveType}			= {
 local function Init_ParseDetectList(_list : {string})
 	if _list and #_list > 0 and type(_list[1]) == "string" then
 		for _,_name in _list do
-			if _name:sub(1,2) == "-" then	-- If any string starts with '-', it's a command to remove a type from the list.
+			if _name:sub(1,1) == "-" then	-- If any string starts with '-', it's a command to remove a type from the list.
 				local temp_index = table.find(CurrentDetectTypes, _name:sub(2,-1))	-- Try to find the type it's referring to…
 				if temp_index then table.remove(CurrentDetectTypes, temp_index) end	-- …and remove it if it's anywhere on the list.
 			else	-- If this one doesn't have a hyphen prefix, just append it to the list if it isn't already there (and is valid)
@@ -1611,6 +1624,7 @@ local function ChangeSaveButtonState(_enable : boolean)
 end
 
 local function DetectItemsOfType(_type : string)
+	local ScanType_ReturnMsg : string? = nil	-- If a ScanType can't find anything, it might show a special message.
 	PlayerSelectParams.RealScanType = ""	-- This variable isn't necessary after the hackish "player scan" occurs.
 	IsBusy = true
 	ClearList()
@@ -1626,19 +1640,19 @@ local function DetectItemsOfType(_type : string)
 		PlayerSelectParams.RealScanType = _type
 		_type = "I_Plyrs"
 	end
-	local success, errormsg = pcall(function() DetectTypeDefs[_type].Scan() end)
+	local success, errormsg = pcall(function() ScanType_ReturnMsg = DetectTypeDefs[_type].Scan() end)
 	IsBusy = false
 	
 	-- Check how many instances are inside the list Instance. If there's more than 1 (the UIListLayout), hide the message overlay.
 	GUI_EmptyItemListText.Visible = #GUI_ItemList:GetChildren() <= 1
-	return success, errormsg
+	return success, errormsg, ScanType_ReturnMsg
 end
 
 local function OnScanTypeButtonClick(_type : string)
 	if IsBusy then return false end	-- Don't try to find things if a scan/save is already happening.
 	
 	LastScanType						= _type
-	GUI_EmptyItemListText.Text			= "Scanning for " .. tostring(DetectTypeDefs[_type].Title) .. "s…"
+	GUI_EmptyItemListText.Text			= "Scanning for " .. tostring(DetectTypeDefs[_type].Title) .. "…"
 	GUI_EmptyItemListText.Visible		= true
 	GUI_Viewer3D.Visible				= false
 	GUI_Viewer2D.Visible				= false
@@ -1646,9 +1660,8 @@ local function OnScanTypeButtonClick(_type : string)
 	GUI_ViewerMessage.Visible			= true
 	
 	PlayerSelectParams.SelectedPlayer	= nil	-- Invalidate the selected Player, so the ScanType may ask the user to pick a target again.
-	local temp_scanError : string?		= nil	-- ScanTypes can return a string to display in place of the item list if nothing's found.
-	local scanComplete, RobloxError		= pcall(function() temp_scanError = DetectItemsOfType(_type) end)
-	if not scanComplete then
+	local done,RobloxError,scanError	= pcall(function() DetectItemsOfType(_type) end)
+	if not done then
 		IsBusy = false
 		DisplayToast(
 			"Whoops! Type " ..
@@ -1658,25 +1671,32 @@ local function OnScanTypeButtonClick(_type : string)
 			"🚫",
 			10
 		)
-		GUI_EmptyItemListText.Text		= "An error occurred while attempting to scan for "..tostring(DetectTypeDefs[_type].Title).."s."
+		GUI_EmptyItemListText.Text		= "An error occurred while attempting to scan for "..tostring(DetectTypeDefs[_type].Title).."."
 		ClearList()
 	elseif #GUI_ItemList:GetChildren() <= 1 then	-- If the list's still empty, show the ScanType's error or a fallback generic message.
-		GUI_EmptyItemListText.Text		= temp_scanError or "No results were found of that type. Please try another 'category' (button)."
+		GUI_EmptyItemListText.Text		= scanError or "No results were found of that type. Please try another 'category' (button)."
+		GUI_EmptyItemListText.Visible	= true
 	else
 		GUI_EmptyItemListText.Visible	= false
 	end
 end
 
 -- Now that all ScanTypes have been added to the list, add their buttons above the list in the window!
-for _num,_type in CurrentDetectTypes do
+local temp_lastPositionValue:number	= 1	-- Updates each time a button is added to the list, so each button has a unique order value.
+for _,_type in CurrentDetectTypes do
 	if DetectTypeDefs[_type] and DetectTypeDefs[_type].Title and DetectTypeDefs[_type].Scan then
-		local newTypeBtn		= Template_DetectType:Clone()
-		newTypeBtn.Name			= "DetectType_" .. _type
-		newTypeBtn.LayoutOrder	= _num
-		newTypeBtn.Text			= DetectTypeDefs[_type].Title
+		if DetectTypeDefs[_type].Position then
+			temp_lastPositionValue	= DetectTypeDefs[_type].Position
+		else temp_lastPositionValue	+= 1	-- Increase the number if this type somehow doesn't have a position defined.
+		end
+		
+		local newTypeBtn			= Template_DetectType:Clone()
+		newTypeBtn.Name				= "DetectType_" .. _type
+		newTypeBtn.LayoutOrder		= temp_lastPositionValue
+		newTypeBtn.Text				= DetectTypeDefs[_type].Title
 		newTypeBtn.MouseButton1Click:Connect(function() OnScanTypeButtonClick(_type) end)
-		newTypeBtn.Visible		= true
-		newTypeBtn.Parent		= GUI_DetectTypeList
+		newTypeBtn.Visible			= true
+		newTypeBtn.Parent			= GUI_DetectTypeList
 	end
 end
 
