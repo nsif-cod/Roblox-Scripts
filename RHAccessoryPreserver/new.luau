@@ -1684,53 +1684,63 @@ local function SelectAndShowItem(_itemNum : number)
 				RefreshRHInstanceReferences()
 			end
 			
-			-- Clone the relevant content (model, GUI, etc.) and place it in the correct viewer, based on its "ContentType" value.
-			local previewContent : SaveReturnTypes = SaveTypeDefs[ItemList[_itemNum].SaveType].Get(
-				{Previewing = true, WindowHasCache = false},
-				ItemList[_itemNum].Identifiers
-			)
-			if previewContent then
-				if #GUI_CurrentCache:GetChildren() > 0 then GUI_CurrentCache:ClearAllChildren() end
-				local cacheContent				= previewContent:Clone()	-- Place the cloned Instance in our cache, first.
-				cacheContent.Parent				= GUI_CurrentCache
-				
-				if SaveTypeDefs[ItemList[_itemNum].SaveType].ContentType == "3D" then
-					previewContent:PivotTo(CFrame.identity)	-- Move our clone to the origin before displaying it in the 3D view.
-					previewContent.Parent		= GUI_ModelViewer	-- The 3D view camera script removes other Models automatically.
-					GUI_ViewerMessage.Visible	= false
-					GUI_Viewer2D.Visible		= false
-					GUI_Viewer3D.Visible		= true	-- Just show the 3D model viewer.
-				elseif SaveTypeDefs[ItemList[_itemNum].SaveType].ContentType == "2D" then
-					if #GUI_Viewer2D:GetChildren() > 0 then GUI_Viewer2D:ClearAllChildren() end
-					if previewContent:IsA("ScreenGui") then	-- Move everything out of the ScreenGui so it shows in the preview pane.
-						for _,child : GuiObject in previewContent:GetChildren() do
-							if child:IsA("PackageLink") then child:Destroy()	-- PackageLinks can't be moved, but they're useless to us.
-							else child.Parent = GUI_Viewer2D					-- Any other GUI elements SHOULD be safe to re-parent.
+			-- Make sure this item's SaveType and its "get" function exist before trying to preview it. If they don't, display a Toast.
+			if SaveTypeDefs[ItemList[_itemNum].SaveType] and SaveTypeDefs[ItemList[_itemNum].SaveType].Get then
+				-- Clone the relevant content (model, GUI, etc.) and place it in the correct viewer, based on its "ContentType" value.
+				local previewContent : SaveReturnTypes = SaveTypeDefs[ItemList[_itemNum].SaveType].Get(
+					{Previewing = true, WindowHasCache = false},
+					ItemList[_itemNum].Identifiers
+				)
+				if previewContent then
+					if #GUI_CurrentCache:GetChildren() > 0 then GUI_CurrentCache:ClearAllChildren() end
+					local cacheContent				= previewContent:Clone()	-- Place the cloned Instance in our cache, first.
+					cacheContent.Parent				= GUI_CurrentCache
+					
+					if SaveTypeDefs[ItemList[_itemNum].SaveType].ContentType == "3D" then
+						previewContent:PivotTo(CFrame.identity)	-- Move our clone to the origin before displaying it in the 3D view.
+						previewContent.Parent		= GUI_ModelViewer	-- The 3D view camera script removes other Models automatically.
+						GUI_ViewerMessage.Visible	= false
+						GUI_Viewer2D.Visible		= false
+						GUI_Viewer3D.Visible		= true	-- Just show the 3D model viewer.
+					elseif SaveTypeDefs[ItemList[_itemNum].SaveType].ContentType == "2D" then
+						if #GUI_Viewer2D:GetChildren() > 0 then GUI_Viewer2D:ClearAllChildren() end
+						if previewContent:IsA("ScreenGui") then	-- Move everything out of the ScreenGui so it shows in the preview pane.
+							for _,child : GuiObject in previewContent:GetChildren() do
+								if child:IsA("PackageLink") then child:Destroy()	-- PackageLinks can't be moved, but they're useless.
+								else child.Parent = GUI_Viewer2D				-- Any other GUI elements SHOULD be safe to re-parent.
+								end
 							end
+							previewContent:Destroy()	-- Get rid of the empty ScreenGui now.
+						else
+							previewContent.Parent	= GUI_Viewer2D	-- A Frame (or other GUI element) can be rendered normally.
 						end
-						previewContent:Destroy()	-- Get rid of the empty ScreenGui now.
+						
+						GUI_ViewerMessage.Visible	= false
+						GUI_Viewer3D.Visible		= false
+						GUI_Viewer2D.Visible		= true	-- Just show the 2D/GUI preview.
 					else
-						previewContent.Parent	= GUI_Viewer2D	-- A Frame (or other GUI element) can be rendered normally.
+						GUI_Viewer3D.Visible		= false
+						GUI_Viewer2D.Visible		= false
+						GUI_ViewerMessage.Text		= "This Instance can't be previewed."
+						GUI_ViewerMessage.Visible	= true	-- Hide both previews, since this Instance is neither 3D nor 2D.
 					end
 					
-					GUI_ViewerMessage.Visible	= false
-					GUI_Viewer3D.Visible		= false
-					GUI_Viewer2D.Visible		= true	-- Just show the 2D/GUI preview.
+					ChangeSaveButtonState(true)	-- Since the content could be cloned, it should be safe to allow tapping the save buttons now.
 				else
-					GUI_Viewer3D.Visible		= false
-					GUI_Viewer2D.Visible		= false
-					GUI_ViewerMessage.Text		= "This Instance can't be previewed."
-					GUI_ViewerMessage.Visible	= true	-- Hide both previews, since this Instance is neither 3D nor 2D.
+					-- If this ScanType has a function for removing useless list items when they aren't found, run it before showing a toast.
+					if DetectTypeDefs[LastScanType].MissingItemResponse then
+						DetectTypeDefs[LastScanType].MissingItemResponse(_itemNum)
+					end
+					DisplayToast("For some reason, the content you selected wasn't found. It may have been destroyed.", "⚠️", 5.25)
 				end
-				
-				ChangeSaveButtonState(true)	-- Since the content could be cloned, it should be safe to allow tapping the save buttons now.
 			else
-				-- If this ScanType has a function for removing useless list items when they aren't found, run it before showing a toast.
-				if DetectTypeDefs[LastScanType].MissingItemResponse then
-					DetectTypeDefs[LastScanType].MissingItemResponse(_itemNum)
-				end
-				DisplayToast("For some reason, the content you selected wasn't found. It may have been destroyed.", "⚠️", 5.25)
+				DisplayToast(
+					"This item can't be previewed. Its SaveType, " .. ItemList[_itemNum].SaveType .. ", isn't valid yet!",
+					"⛔",
+					5.75
+				)
 			end
+			
 		end
 	else
 		DisplayToast("Attempted to select an item outside of the list (" .. tostring(_itemNum) .. ").","⚠️",4.75)
