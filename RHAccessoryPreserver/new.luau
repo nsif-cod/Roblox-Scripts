@@ -1,7 +1,7 @@
 --[[
 	ROYALE HIGH ACCESSORY PRESERVER V2		|
 	PROUDLY MADE BY XANE MYERS IN APRIL 2025|
-	LAST UPDATED APRIL 9TH, 2025			|
+	LAST UPDATED APRIL 10TH, 2025			|
 	----------------------------------------/
 	An amazing psuedo-sequel to an already powerful script, used for saving various (mostly 3D) assets from Roblox experiences,
 	including but no longer limited to Royale High! Run this script (preferably using Infinite Fun's 'rhsave' command) then tap
@@ -1189,6 +1189,111 @@ local DetectTypeDefs : {ScanType}			= {
 			end	-- If anything else can't be found, just leave the entry in the list for now.
 		end
 	},
+	
+	--[[
+		DormRH (RH Campus 3-4 dorms and furniture)
+		Tries to find the current active dorm by looking for parts named after players' user IDs, scanning each for a Model named
+		"InnerDorm", which only spawns on a client when a player stands just outside of an "open" dorm, or inside of it. (If a
+		player has "dorm privacy" enabled, the inner model, annoyingly, won't appear if their door is closed.)
+		
+		If a loaded dorm is found, the full dorm and all of its furniture will be listed in the GUI! Although any piece of
+		furniture can be targetted (using its debug ID), if the player changes that item's toggle or variations, it will get a
+		new debug ID since RH spawns a new model instead of modifying the existing one. This makes it impossible to save
+		multiple versions of a single item when "trying it out", so make sure this is the only copy of that item in your dorm
+		if planning to save different variation and toggle combinations.
+	]]--
+	["DormRH"]								= {
+		Title								= "Active Dorm",
+		PlayerContext						= false,	-- A single dorm is loaded at any time, so there's no point in checking a Player.
+		ContentType							= "3D",
+		Scan								= function()
+			-- Find a Part with a numerical name that contains an "InnerDorm" model. This doesn't exist unless a dorm is loaded, our goal.
+			local temp_foundDorm : Model?	= nil
+			for _, inst in  workspace:GetChildren() do
+				if inst:IsA("Part") and tonumber(inst.Name) and inst:FindFirstChild("InnerDorm") then temp_foundDorm = inst; break end
+			end
+			
+			-- Is a dorm loaded? If so, the list can be filled out!
+			if temp_foundDorm then
+				local temp_owner:Player?	= Players:GetPlayerByUserId(tonumber(temp_foundDorm.Name))
+				
+				if temp_owner then
+					AddListPart(
+						"Everything",
+						"🏠",
+						"DormRH",
+						{"DormAll", tonumber(temp_foundDorm.Name)},
+						temp_owner
+					)
+					AddListPart(
+						"Interior only (furniture and inner model)",
+						"🕳️",
+						"DormRH",
+						{"DormInner", tonumber(temp_foundDorm.Name)},
+						temp_owner
+					)
+					AddListPart(
+						"Furniture only",
+						"🛒",
+						"DormRH",
+						{"FurniAll", tonumber(temp_foundDorm.Name)},
+						temp_owner
+					)
+					
+					--[[
+						If this dorm Model has a DormFurnjiture model inside it, and it has more than just the "DormObject"
+						ObjectValue instance in it, all of its furniture will be indexed below the "general" save options above.
+					]]--
+					local FurniFolder : Model?	= temp_foundDorm:FindFirstChild("DormFurniture")
+					if FurniFolder and #FurniFolder:GetChildren() > 1 and FurniFolder:FindFirstChildOfClass("Model") then
+						for _, furniture : Model in FurniFolder:GetChildren() do
+							if furniture:IsA("Model") then
+								local temp_name : StringValue? =	-- Pick one of this object's redundant 3 StringValues for its name.
+									furniture:FindFirstChild("AliasTag") or		-- For halos, this contains their FULL title...
+									furniture:FindFirstChild("NameTag") or		-- ...while this uses its shorter, "internal ID" name...
+									furniture:FindFirstChild("FurnitureName")	-- ...and this is just an unhelpful number.
+								
+								--[[
+									Furniture will always appear in the list, but if their name wasn't found above, it won't be included
+									in the "identification values", so nothing will be saved/cloned if this specific Model is re-
+									constructed (by merely changing its toggle or any of its variations, mind you). I should really
+									warn the user when this happens, just in case the user's trying to save variations rapidly like me.
+								]]--
+								AddListPart(
+									temp_name and temp_name.Value or furniture.Name:sub(1,16),
+									"🪑",
+									"DormRH",
+									{
+										"FurniOne",
+										furniture.Name,
+										furniture:GetDebugId(),
+										temp_name and temp_name.Value or nil
+									}
+								)
+							end
+						end
+					else
+						DisplayToast(
+							"This dorm's furniture Model was missing, or didn't contain any furniture.",
+							"ℹ️",
+							4.333
+						)
+					end
+				else return "A loaded dorm was found, but couldn't be associated with a Player. Sorry for this inconvenience."
+				end
+			else
+				return
+					"No dorms are loaded. Stand near or inside a dorm, then try again." ..
+					'"Private" dorms will not load while their doors are closed.'
+			end
+		end
+	},
+	
+	--[[
+		Tools (standard Roblox tool finder)
+		A ScanType that does what it says on its tin. This finds Tool instances inside a player's character model, Backpack, and
+		StarterPack (which isn't player-specific).
+	]]--
 	["Tools"]								= {
 		Title								= "Tools",
 		PlayerContext						= true,		-- Each player will only add one entry to the list, so they're all listed.
@@ -1200,7 +1305,7 @@ local DetectTypeDefs : {ScanType}			= {
 					AddListPart("Holding in Hand", nil, "Header")
 					AddListPart(
 						temp_char:FindFirstChildOfClass("Tool").Name,
-						"🔨",
+						"🖐️",
 						"GenModel",
 						{temp_char:FindFirstChildOfClass("Tool").Name, "Character", temp_char:FindFirstChildOfClass("Tool"):GetDebugId()},
 						PlayerSelectParams.SelectedPlayer
