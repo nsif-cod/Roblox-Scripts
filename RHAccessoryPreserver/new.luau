@@ -73,9 +73,8 @@
 	•	DormRH		Re-locates the loaded dorm room, then clones the full model.
 	•	FurniRH		Tries to find either an item with a matching debug ID or name within the loaded dorm, cloning and anonymizing it.
 	
-	LAST TODO: Continue working on the CharaRH SaveType. It's probably finished, and if so, try to start working on DormRH, the next type.
-	If you want more of a challenge, try adding the CharaRH, ItemRH, and HeelsRH SaveTypes, which will need ported v1 functions to work
-	and name the resulting cloned Model.
+	LAST TODO: Start working on the missing SaveTypes! The RH-specific SaveTypes (CharaRH and DormRH) are implemented, and can list
+	instances, but nothing they list can be previewed or saved until those types are defined.
 ]]--
 
 if not game:IsLoaded() then game.Loaded:Wait() end
@@ -919,19 +918,27 @@ local function RefreshRHInstanceReferences()
 		if not PlayerGui or not PlayerGui.Parent then error("PlayerGui somehow didn't exist while looking for RH-specific instances.") end
 	end
 	
+	TDStorage.RHRefs.EquippedStorage		= workspace:FindFirstChild("EquippedStorage")
+	
 	--[[
 		Though it looks like both use the same toggle/variation seleciton GUI, clothes and furniture actually use separate copies of the
 		same GUI design; Everything inside both of the frames has the same layout, so this script will change between them depending on
 		what it's targetting.
 	]]--
-	TDStorage.RHRefs.GUIBase_Clothing		= PlayerGui.PreviewToggles.PreviewTogglesFrame
+	local temp_clothingGuiRef				= PlayerGui:FindFirstChild("PreviewToggles")
+	if temp_clothingGuiRef then
+		TDStorage.RHRefs.GUIBase_Clothing	= temp_clothingGuiRef:FindFirstChild("PreviewTogglesFrame")
+	end
+	
 	local temp_furniDecorModeGui 			= PlayerGui:FindFirstChild("DecorateModeGui")
 	TDStorage.RHRefs.GUIBase_Furniture		= nil
 	if temp_furniDecorModeGui then	-- This GUI only exists in Campus 3's Castle Dorms and Campus 4, and will just be nil outside of them.
 		TDStorage.RHRefs.GUIBase_Furniture	= temp_furniDecorModeGui:FindFirstChild("TogglesFrameNEW")
 	end
-	temp_furniDecorModeGui					= nil	-- Clear this now-unnecessary variable now, to potentially free up memory.
-	TDStorage.RHRefs.EquippedStorage		= workspace:FindFirstChild("EquippedStorage")
+	
+	-- Clear these now-unnecessary variables now, in case it frees up memory.
+	temp_furniDecorModeGui					= nil
+	temp_clothingGuiRef						= nil
 	
 	return true
 end
@@ -1101,7 +1108,7 @@ local DetectTypeDefs : {ScanType}			= {
 			AddListPart("Full character...", "🧑", "CharaRH", {}, PlayerSelectParams.SelectedPlayer)
 			
 			-- Next, index all of this player's currently-equipped RH clothes. Let's get references to the ES sub-folders first.
-			if TDStorage.RHRefs.EquippedStorage then
+			if TDStorage and TDStorage.RHRefs and TDStorage.RHRefs.EquippedStorage then
 				local temp_accessoryFolder:Folder?	= TDStorage.RHRefs.EquippedStorage:FindFirstChild("Accessories")
 				local temp_hairFolder : Folder?		= TDStorage.RHRefs.EquippedStorage:FindFirstChild("Hair")
 				local temp_heelFolder : Folder?		= TDStorage.RHRefs.EquippedStorage:FindFirstChild("Heels")
@@ -1173,12 +1180,20 @@ local DetectTypeDefs : {ScanType}			= {
 										"ItemRH",
 										{"Accessories",item:FindFirstChild("AccessoryName").Value},
 										PlayerSelectParams.SelectedPlayer
-									)	-- TODO: I believe this can detet all character parts, but please look over it and make sure nothing's missing before keeping this!
+									)	-- TODO: I believe this can detect all character parts, but please look over it and make sure nothing's missing before keeping this!
 								end
 							end
 						end
 					end
 				end
+			else
+				warn("Something isn't right here... Is our EquippedStorage reference correct?")
+				print(TDStorage)
+				print(TDStorage.RHRefs)
+				print(tostring(TDStorage.RHRefs.EquippedStorage))
+				print(TDStorage.RHRefs.EquippedStorage:GetFullName())
+				print(TDStorage.RHRefs.GUIBase_Clothing:GetFullName())
+				print(TDStorage.RHRefs.GUIBase_Furniture:GetFullName())
 			end
 			return nil
 		end,
@@ -1268,7 +1283,8 @@ local DetectTypeDefs : {ScanType}			= {
 										furniture.Name,
 										furniture:GetDebugId(),
 										temp_name and temp_name.Value or nil
-									}
+									},
+									temp_owner
 								)
 							end
 						end
