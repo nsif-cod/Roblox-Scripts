@@ -1107,6 +1107,8 @@ local DetectTypeDefs : {ScanType}			= {
 			)
 			AddListPart("Full character...", "🧑", "CharaRH", {}, PlayerSelectParams.SelectedPlayer)
 			
+			TDStorage.RHRefs.EquippedStorage = workspace:FindFirstChild("EquippedStorage")
+			
 			-- Next, index all of this player's currently-equipped RH clothes. Let's get references to the ES sub-folders first.
 			if TDStorage and TDStorage.RHRefs and TDStorage.RHRefs.EquippedStorage then
 				local temp_accessoryFolder:Folder?	= TDStorage.RHRefs.EquippedStorage:FindFirstChild("Accessories")
