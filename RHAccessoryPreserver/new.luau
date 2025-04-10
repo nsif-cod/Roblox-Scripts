@@ -117,6 +117,8 @@ if not hiddenUI then error("Your executor doesn't support hiding GUI's, so it's 
 -- CONSTANTS (PART 1, FOR GUI INITIALIZATION AND EXECUTION)
 local DEF_PREVIEW_MSG	= "Select an item from the left-side list to preview it here!"
 
+local DEF_GROUP_NAME	= "Untitled Group"	-- Initial save sub-folder's name
+
 local COLOR_WHITE = Color3.new(1, 1, 1)
 
 --[[
@@ -877,7 +879,7 @@ local VisibleListSize						= 0		-- Counts how many header and item templates hav
 local SelectedIndex							= 0		-- The currently-selected ItemList index, used by the save buttons.
 local HighestToastNumber					= 0		-- Number incremented with each displayed toast to keep them in order, top to bottom.
 
-local SaveGroupName							= ""	-- Sub-folder to place the next saved item into. Will use a generic name if left blank.
+local SaveGroupName							= DEF_GROUP_NAME	-- Sub-folder to place the next saved item into.
 local ActiveToasts : {ToastDefinition}
 											= {}	-- Array of references to visible, un-dismissed toast notification CanvasGroups.
 
@@ -2064,7 +2066,7 @@ GUI_GroupNameBox.FocusLost:Connect(function(_enterPressed, _lossInput)
 		if GUI_GroupNameBox.Text ~= SaveGroupName then
 			SaveGroupName = GUI_GroupNameBox.Text
 			DisplayToast(
-				"New saves will be put in Lighting > Saved Items > "..if SaveGroupName:len()>0 then SaveGroupName else "Untitled Group" ..
+				"New saves will be put in Lighting > Saved Items > "..if SaveGroupName:len()>0 then SaveGroupName else DEF_GROUP_NAME ..
 					".",
 				"✅",
 				5.25
