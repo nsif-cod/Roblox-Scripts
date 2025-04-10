@@ -1122,7 +1122,7 @@ local DetectTypeDefs : {ScanType}			= {
 				
 				-- If all of the folders exist (which they should unless RH changes something), proceed to reference Player sub-folders.
 				if temp_accessoryFolder and temp_hairFolder and temp_heelFolder and temp_skirtFolder and temp_wingFolder then
-					print("Okay, we have everything. Going through each sub-folder now...")
+					print("Well, we know we have all of the main sub-folders, but what about this player's?")
 					temp_ESAccessories				= temp_accessoryFolder:FindFirstChild(PlayerSelectParams.SelectedPlayer.Name)
 					temp_ESHair						= temp_hairFolder:FindFirstChild(PlayerSelectParams.SelectedPlayer.Name)
 					temp_ESHeels					= temp_heelFolder:FindFirstChild(PlayerSelectParams.SelectedPlayer.Name)
@@ -1131,6 +1131,7 @@ local DetectTypeDefs : {ScanType}			= {
 					
 					-- If we found all of this player's sub-folders, we can finally index their clothes!
 					if temp_ESAccessories and temp_ESHair and temp_ESHeels and temp_ESSkirts and temp_ESWings then
+						print("YEP! We have all of the necessary references!")
 						-- If they're using RH hair, shoes, and/or a skirt, list those first, as they can't use more than one of each.
 						-- Also, some hairstyles use meshes from the weird "ReplicatedHair" folder. They're named "HairLocal" instead.
 						local temp_hairModel:Model?	= temp_ESHair:FindFirstChild("Hair") or temp_ESHair:FindFirstChild("HairLocal")
@@ -1142,6 +1143,7 @@ local DetectTypeDefs : {ScanType}			= {
 								{"Hair"},
 								PlayerSelectParams.SelectedPlayer
 							)
+						else warn("No hair was found...")
 						end
 						
 						if temp_ESHeels:FindFirstChild("Heels") and temp_ESHeels:FindFirstChild("Heels"):FindFirstChild("HeelName")
@@ -1153,6 +1155,7 @@ local DetectTypeDefs : {ScanType}			= {
 								{temp_ESHeels:FindFirstChild("Heels"):FindFirstChild("HeelName").Value},
 								PlayerSelectParams.SelectedPlayer
 							)
+						else warn("No heels/shoes were found...")
 						end
 						
 						if temp_skirtFolder:FindFirstChild("Skirt") and temp_ESHeels:FindFirstChild("Skirt"):FindFirstChild("SkirtName")
@@ -1164,6 +1167,7 @@ local DetectTypeDefs : {ScanType}			= {
 								{"Skirts",temp_ESHeels:FindFirstChild("Skirt"):FindFirstChild("SkirtName").Value},
 								PlayerSelectParams.SelectedPlayer
 							)
+						else warn("No skirt was found...")
 						end
 						
 						if temp_wingFolder:FindFirstChild("Wings") then
@@ -1174,6 +1178,7 @@ local DetectTypeDefs : {ScanType}			= {
 								{"Wings"},
 								PlayerSelectParams.SelectedPlayer
 							)
+						else print("No wings were found (but this player might not have any equipped)...")
 						end
 						
 						if #temp_ESAccessories:GetChildren() > 0 then
@@ -1189,6 +1194,7 @@ local DetectTypeDefs : {ScanType}			= {
 									)	-- TODO: I believe this can detect all character parts, but please look over it and make sure nothing's missing before keeping this!
 								end
 							end
+						else warn("NO ACCESSORIES? What's going on?")
 						end
 					end
 				else
