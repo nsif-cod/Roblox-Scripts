@@ -1704,7 +1704,9 @@ local function SelectAndShowItem(_itemNum : number)
 					if #GUI_Viewer2D:GetChildren() > 0 then GUI_Viewer2D:ClearAllChildren() end
 					if previewContent:IsA("ScreenGui") then	-- Move everything out of the ScreenGui so it shows in the preview pane.
 						for _,child : GuiObject in previewContent:GetChildren() do
-							child.Parent = GUI_Viewer2D
+							if child:IsA("PackageLink") then child:Destroy()	-- PackageLinks can't be moved, but they're useless to us.
+							else child.Parent = GUI_Viewer2D					-- Any other GUI elements SHOULD be safe to re-parent.
+							end
 						end
 						previewContent:Destroy()	-- Get rid of the empty ScreenGui now.
 					else
