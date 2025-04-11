@@ -1,7 +1,7 @@
 --[[
 	ROYALE HIGH ACCESSORY PRESERVER V2		|
 	PROUDLY MADE BY XANE MYERS IN APRIL 2025|
-	LAST UPDATED APRIL 10TH, 2025			|
+	LAST UPDATED APRIL 11TH, 2025			|
 	----------------------------------------/
 	An amazing psuedo-sequel to an already powerful script, used for saving various (mostly 3D) assets from Roblox experiences,
 	including but no longer limited to Royale High! Run this script (preferably using Infinite Fun's 'rhsave' command) then tap
@@ -858,6 +858,35 @@ local function TryOrCreateFolder(_parent : Instance, _name : string) : Folder
 	return FolderRef
 end
 
+--[[
+	Starting at the given Instance, recursively checks if each of the given child names exist within each
+	instance. For example, if the array contained "Mary" then "Character", it would check for if "Mary"
+	is within the starting point, then if "Character" is within "Mary". If any of the children don't
+	exist, this will return false. (This is the same as a chain of ":FindFirstChild()" checks.)
+]]--
+local function IterateChildHierarchy(_startInstance : Instance, _details : {{ Name : string, Type : string }}) : Instance?
+	if not _startInstance then return nil end	-- A starting Instance must be provided.
+	local CurrentLocation = _startInstance	-- This tracks the current Instance as we move down the hierarchy.
+	
+	if _startInstance and typeof(_startInstance) == "Instance" and _details and type(_details) == "table" and
+		_details[1].Name and type(_details[1].Name) == "string" and _details[1].Type and type(_details[1].Type) == "string"
+	then
+		-- The recursion begins! Do a ":FindFirstChild()"" check for each string in order, each time moving deeper into the hierarchy.
+		for _, level in _details do
+			-- Check which type of scan to do, then do it based on "Type". If certain keywords aren't found, assume it's FindFirstChild().
+			if string.find(string.lower(level.Type), "wait") then CurrentLocation = CurrentLocation:WaitForChild(level.Name, level.Time or 45)
+			elseif string.find(string.lower(level.Type), "class") then CurrentLocation = CurrentLocation:FindFirstChildOfClass(level.Name)
+			else CurrentLocation = CurrentLocation:FindFirstChild(level.Name)
+			end
+			
+			-- If this check caused the variable to become nil, that child Instance didn't exist, so it ends early.
+			if not CurrentLocation then break end
+		end
+	end
+	
+	return CurrentLocation	-- This will be nil if any child isn't found, and will conveniently BE the last child if everything passes.
+end
+
 -- Also create a folder in Lighting (where I dump all of my Instances). If it's already there, use it instead of making a new one.
 local SaveBaseFolder : Folder				= TryOrCreateFolder(game:GetService("Lighting"), "Saved Items")
 
@@ -945,6 +974,48 @@ local function RefreshRHInstanceReferences()
 	return true
 end
 
+--[[
+	<custom><nb>
+	Checks for Royale High's "EquippedStorage" folder, its standard "category" sub-folders, then a specific player's folders within
+	those. If any of them are found, references to them will be included in the returned dictionary entry.
+]]--
+local function GetESFolders(_playerName : string) :
+	{
+		Accessories							: Folder?,
+		Hair								: Folder?,
+		Heels								: Folder?,
+		Skirts								: Folder?,
+		Wings								: Folder?
+	}
+	local FoundFolders						= {}
+	local EquippedStorage:Folder?			= workspace:FindFirstChild("EquippedStorage")
+	
+	if EquippedStorage then
+		FoundFolders.Accessories			= IterateChildHierarchy(EquippedStorage, {
+			{Name = "Accessories",							Type = "FindFirstChild"},
+			{Name = PlayerSelectParams.SelectedPlayer.Name,	Type = "FindFirstChild"}
+		})
+		FoundFolders.Hair				= IterateChildHierarchy(EquippedStorage, {
+			{Name = "Hair",									Type = "FindFirstChild"},
+			{Name = PlayerSelectParams.SelectedPlayer.Name,	Type = "FindFirstChild"}
+		})
+		FoundFolders.Heels				= IterateChildHierarchy(EquippedStorage, {
+			{Name = "Heels",								Type = "FindFirstChild"},
+			{Name = PlayerSelectParams.SelectedPlayer.Name,	Type = "FindFirstChild"}
+		})
+		FoundFolders.Skirts				= IterateChildHierarchy(EquippedStorage, {
+			{Name = "Skirts",								Type = "FindFirstChild"},
+			{Name = PlayerSelectParams.SelectedPlayer.Name,	Type = "FindFirstChild"}
+		})
+		FoundFolders.Wings				= IterateChildHierarchy(EquippedStorage, {
+			{Name = "Wings",								Type = "FindFirstChild"},
+			{Name = PlayerSelectParams.SelectedPlayer.Name,	Type = "FindFirstChild"}
+		})
+	end
+	
+	return FoundFolders
+end
+
 -- STATIC DATA
 type ValidIDValues							= string|number
 
@@ -974,10 +1045,139 @@ local PLACE_ID								= game.PlaceId
 local TI_TOAST_FADEIN						= TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
 local TI_TOAST_FADEOUT						= TweenInfo.new(0.625, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
 
+local function AssignDescriptiveRHItemName(_isFurni : boolean, Target : Model)
+	if not Target then return false end	-- This function needs a Model, as it will modify it, adding attributes and renaming it.
+	
+	-- Set up these reference variables, which were used by the RHAPv1 function this code was imported from.
+	local GUI_Base							= nil
+	local GUIBase_Clothing : Frame?			= nil
+	local GUIBase_Furniture : Frame?		= nil
+	local ToggleNum : number				= 0
+	local VariationInfo : {any}				= {}
+	local SaveName : string					= ""
+	
+	--[[
+		Though it looks like both use the same toggle/variation seleciton GUI, clothes and furniture actually use separate copies of the
+		same GUI design; Everything inside both of the frames has the same layout, so this script will change between them depending on
+		what it's targetting.
+	]]--
+	local temp_clothingGuiRef				= PlayerGui:FindFirstChild("PreviewToggles")
+	if temp_clothingGuiRef then
+		GUIBase_Clothing					= temp_clothingGuiRef:FindFirstChild("PreviewTogglesFrame")
+	end
+	
+	local temp_furniDecorModeGui 			= PlayerGui:FindFirstChild("DecorateModeGui")
+	if temp_furniDecorModeGui then	-- This GUI only exists in Campus 3's Castle Dorms and Campus 4, and will just be nil outside of them.
+		GUIBase_Furniture					= temp_furniDecorModeGui:FindFirstChild("TogglesFrameNEW")
+	end
+	
+	-- Clear these now-unnecessary variables now, in case it frees up memory.
+	temp_furniDecorModeGui					= nil
+	temp_clothingGuiRef						= nil
+	
+	-- Dynamically point the following code to the clothing or furniture toggle/variation customization GUI, depending on our target type.
+	GUI_Base								= if not _isFurni then GUIBase_Clothing else GUIBase_Furniture
+	
+	if GUI_Base.Visible then	-- Is the preview GUI visible? We'll grab detailed info from it!
+		local ItemName : TextLabel			= GUI_Base:FindFirstChild("ItemName")
+		
+		-- Figure out the player's current toggle number by checking each sub-frame's UIStroke visibility. Selected toggles are outlined.
+		for _,toggle in GUI_Base.Inner:GetChildren() do
+			if toggle:IsA("Frame") then
+				if toggle:FindFirstChild("UIStrokeSelected") and toggle:FindFirstChild("UIStrokeSelected").Enabled then
+					ToggleNum = tonumber(toggle.ToggleNumber.Text)	-- Get the small number in its upper left corner and use that.
+					break
+				end
+			end
+		end
+		
+		-- Create and sort a list of all frames in the variation list section of the customization GUI.
+		local temp_varUIList = {}
+		for _,category : Instance in GUI_Base.DynamicToggleVariants.ToggleCycleFrame:GetChildren() do
+			if category:IsA("Frame") then
+				table.insert(temp_varUIList, category)
+			end
+		end
+		table.sort(temp_varUIList,function(_instA : Frame,_instB : Frame)	-- Sort the list in ascending "order".
+			return _instA.LayoutOrder < _instB.LayoutOrder	-- If A has a lower order, it's placed before B.
+		end)
+		
+		-- Next, iterate through this item's variation "categories" and get their information by using some "string magic".
+		for num,category in temp_varUIList do
+			local temp_newEntry	= {
+				CategoryName	= category.Name:sub(7),	-- Remove the first 6 letters (which are usually "Cycle ").
+				VarName			= "Unknown",
+				VarNumber		= 0
+			}
+			
+			-- Unfortunately, Royale High crams both the current variation and its name into the same string, so the cryptic-looking
+			-- "code" below figures out where the left-most number and name are, and slices the original string up, storing the info.
+			local VariationStr:string	= category.CurrentCycleItem.Text	-- This includes both the number and name ("(1/5) Angel").
+			local slashPos				= VariationStr:find("/",1,true)		-- The slash separates the current and total variations.
+			local _,rightParenLoc		= VariationStr:find(") ",1,true)	-- The right parentheses and space are the name's left bound.
+			
+			temp_newEntry.VarNumber		= tonumber(VariationStr:sub(2,slashPos-1))
+			temp_newEntry.VarName		= VariationStr:sub(rightParenLoc+1)
+			
+			table.insert(VariationInfo, temp_newEntry)	-- Insert this entry at its position in RH's list.
+		end
+		
+		-- Finally, assemble this Model's final name, starting with its given name and toggle number.
+		SaveName = ItemName.Text .. " T" .. ToggleNum
+		if #VariationInfo > 0 then
+			SaveName ..= " V"	-- Add a separator character before appending the variation information to the Model's name.
+			for num,category in VariationInfo do	-- Append each variation's category name, number, and variant name to the name. This is messy.
+				SaveName ..= tostring(category.VarNumber)
+				
+				if num < #VariationInfo then SaveName ..= "/" end	-- If this isn't the last variation, add a separator before continuing.
+			end
+			
+			-- table.clear(VariationInfo)	-- Clear this table to slightly lower memory usage, if it matters here.
+		end
+	else	-- Otherwise, there's still hope! See if the target contains a StringValue with its name!
+		local temp_name:StringValue?	=
+			Target:FindFirstChild("HeelName") or
+			Target:FindFirstChild("AccessoryName") or
+			Target:FindFirstChild("SkirtName") or
+			Target:FindFirstChild("NameTag")	-- Dorm furniture
+		if temp_name then
+			if GUI_Base == GUIBase_Furniture then	-- Dorm furniture can include a NumberValue with its toggle number inside.
+				local ToggleValue : NumberValue? = Target:FindFirstChild("ToggleIndex")
+				if ToggleValue then	-- If the toggle number Instance exists, use the furniture's name and toggle number as its title.
+					ToggleNum = ToggleValue.Value
+					SaveName = temp_name.Value .. " T" .. ToggleValue.Value
+				else SaveName = "Item"	-- Otherwise, fall back on "Item". We do NOT want to save an ugly GUID string!
+				end
+			else
+				SaveName = temp_name and temp_name.Value or "How did we get here❔"	-- Use the item's name as a fallback, or unused text.
+			end
+		-- else SetSaveFolder(nil)	-- If a name can't be found, this item just can't be saved.
+		end
+	end
+	
+	if SaveName:len() > 0 then
+		Target.Name = SaveName
+	end
+	
+	-- If any toggle or variation-related info was gathered above, write it to this clone's attributes.
+	if ToggleNum > 0 then Target:SetAttribute("Toggle", ToggleNum) end
+	if VariationInfo and VariationInfo[1] then
+		for num,category in VariationInfo do
+			Target:SetAttribute("Var" .. num .. "Category", category.CategoryName)
+			Target:SetAttribute("Var" .. num .. "Choice", category.VarName .. " (" .. tostring(category.VarNumber) .. ")")
+		end
+	end
+	
+	-- Lastly, clear the variation info table, just in case it frees memory.
+	table.clear(VariationInfo)
+	VariationInfo = nil
+	return Target	-- Return the modified Model back to the caller, even if this is technically pointless.
+end
+
 -- Default detection categories/types, which should work for most Roblox games that use standard characters and tools.
 local DefaultDetectTypes					= {
 	"Chara",										-- R15 characters linked to players.
-	-- "Tools",										-- Finds all tools in a player's backpack, character model, and StarterPack.
+	"Tools",										-- Finds all tools in a player's backpack, character model, and StarterPack.
 	"GUI"											-- Lets the user save all or any ScreenGui from their PlayerGui.
 }
 
@@ -998,10 +1198,10 @@ local GameOverrideData						= {
 ]]--
 local PlaceOverrideData						= {
 	[735030788]								= {	-- Royale High Campus 4
-		"DormRH"								-- Allow saving the currently-loaded dorm room (if the player's standing in one).
+		"DormRH"								-- Allow saving the currently-loaded dorm room (if one is loaded).
 	},
 	[1067660288]							= {	-- Royale High Campus 3 Castle Dorms
-		"DormRH"								-- Allow saving the currently-loaded dorm room (if the player's standing in one).
+		"DormRH"								-- Allow saving the currently-loaded dorm room (if one is loaded).
 	}
 }
 
@@ -1096,11 +1296,6 @@ local DetectTypeDefs : {ScanType}			= {
 		Scan								= function()
 			-- First, try to get references to all of this player's folders (their character and EquippedStorage sub-folders)
 			local temp_char : Model?		= nil
-			local temp_ESAccessories:Folder?= nil
-			local temp_ESHair : Folder?		= nil
-			local temp_ESHeels : Folder?	= nil
-			local temp_ESSkirts : Folder?	= nil
-			local temp_ESWings : Folder?	= nil
 			-- This script could also support the legacy mermaid tails, but seemingly no one even uses them, so... Ehh.
 			
 			temp_char						= PlayerSelectParams.SelectedPlayer.Character
@@ -1113,112 +1308,94 @@ local DetectTypeDefs : {ScanType}			= {
 			)
 			AddListPart("Full character...", "🧑", "CharaRH", {}, PlayerSelectParams.SelectedPlayer)
 			
-			local EquippedStorage:Folder?	= workspace:FindFirstChild("EquippedStorage")
+			local ESFolder					= GetESFolders(PlayerSelectParams.SelectedPlayer.Name)
+			if not ESFolder.Accessories or not ESFolder.Hair or not ESFolder.Heels or ESFolder.Skirts or not ESFolder.Wings then
+				DisplayToast(
+					"One of this player's EquippedStorage folders couldn't be found.",
+					"🚫",
+					3.5
+				)
+				return "xCouldn't find player's ES folders..."
+			end
 			
-			-- Next, index all of this player's currently-equipped RH clothes. Let's get references to the ES sub-folders first.
-			if EquippedStorage then
-				print("Found EquippedStorage folder! Attempting to find this player's clothes and stuff now!")
-				local temp_accessoryFolder:Folder?	= EquippedStorage:FindFirstChild("Accessories")
-				local temp_hairFolder : Folder?		= EquippedStorage:FindFirstChild("Hair")
-				local temp_heelFolder : Folder?		= EquippedStorage:FindFirstChild("Heels")
-				local temp_skirtFolder : Folder?	= EquippedStorage:FindFirstChild("Skirts")
-				local temp_wingFolder : Folder?		= EquippedStorage:FindFirstChild("Wings")
-				
-				-- If all of the folders exist (which they should unless RH changes something), proceed to reference Player sub-folders.
-				if temp_accessoryFolder and temp_hairFolder and temp_heelFolder and temp_skirtFolder and temp_wingFolder then
-					print("Well, we know we have all of the main sub-folders, but what about this player's?")
-					temp_ESAccessories				= temp_accessoryFolder:FindFirstChild(PlayerSelectParams.SelectedPlayer.Name)
-					temp_ESHair						= temp_hairFolder:FindFirstChild(PlayerSelectParams.SelectedPlayer.Name)
-					temp_ESHeels					= temp_heelFolder:FindFirstChild(PlayerSelectParams.SelectedPlayer.Name)
-					temp_ESSkirts					= temp_skirtFolder:FindFirstChild(PlayerSelectParams.SelectedPlayer.Name)
-					temp_ESWings					= temp_wingFolder:FindFirstChild(PlayerSelectParams.SelectedPlayer.Name)
-					
-					-- If we found all of this player's sub-folders, we can finally index their clothes!
-					if temp_ESAccessories and temp_ESHair and temp_ESHeels and temp_ESSkirts and temp_ESWings then
-						print("YEP! We have all of the necessary references!")
-						-- If they're using RH hair, shoes, and/or a skirt, list those first, as they can't use more than one of each.
-						-- Also, some hairstyles use meshes from the weird "ReplicatedHair" folder. They're named "HairLocal" instead.
-						local temp_hairModel:Model?	= temp_ESHair:FindFirstChild("Hair") or temp_ESHair:FindFirstChild("HairLocal")
-						if temp_hairModel then
-							AddListPart(
-								"Hair",
-								"🪮",
-								"ItemRH",
-								{"Hair"},
-								PlayerSelectParams.SelectedPlayer
-							)
-						else print("No hair was found...")
-						end
-						
-						if temp_ESHeels:FindFirstChild("Heels") and temp_ESHeels:FindFirstChild("Heels"):FindFirstChild("HeelName")
-						then
-							AddListPart(
-								temp_ESHeels:FindFirstChild("Heels") and
-									temp_ESHeels:FindFirstChild("Heels"):FindFirstChild("HeelName") and
-									temp_ESHeels:FindFirstChild("Heels"):FindFirstChild("HeelName").Value or
-									"Heels or Shoes",
-								"👠",
-								"HeelsRH",
-								{},	-- temp_ESHeels:FindFirstChild("Heels"):FindFirstChild("HeelName").Value},
-								PlayerSelectParams.SelectedPlayer
-							)
-						else print("No heels/shoes were found...")
-						end
-						
-						if temp_ESSkirts:FindFirstChild("Skirt") and temp_ESSkirts:FindFirstChild("Skirt"):FindFirstChild("SkirtName")
-						then
-							AddListPart(
-								temp_ESSkirts:FindFirstChild("Skirt") and
-									temp_ESSkirts:FindFirstChild("Skirt"):FindFirstChild("SkirtName") and
-									temp_ESSkirts:FindFirstChild("Skirt"):FindFirstChild("SkirtName").Value or
-									"Skirt",
-								"👗",
-								"ItemRH",
-								{"Skirts"},	-- ,temp_ESSkirts:FindFirstChild("Skirt"):FindFirstChild("SkirtName").Value},
-								PlayerSelectParams.SelectedPlayer
-							)
-						else print("No skirt was found...")
-						end
-						
-						if temp_ESWings:FindFirstChild("Wings") then
-							AddListPart(
-								"Wings",
-								"⚪",
-								"ItemRH",
-								{"Wings"},
-								PlayerSelectParams.SelectedPlayer
-							)
-						else print("No wings were found...")
-						end
-						
-						if #temp_ESAccessories:GetChildren() > 0 then
-							AddListPart("Accessories (most clothes)", nil, "Header")
-							for _,item : Model in temp_ESAccessories:GetChildren() do
-								if item:IsA("Model") and item:FindFirstChild("AccessoryName") then
-									AddListPart(
-										item:FindFirstChild("AccessoryName").Value,
-										if item:FindFirstChild("AccessoryName").Value:find("Halo") then "😇" else "🎀",
-										"ItemRH",
-										{"Accessories",item:FindFirstChild("AccessoryName").Value},
-										PlayerSelectParams.SelectedPlayer
-									)	-- TODO: I believe this can detect all character parts, but please look over it and make sure nothing's missing before keeping this!
-								else warn(item.Name .. " isn't a standard Accessory, apparently.")
-								end
-							end
-						else warn("NO ACCESSORIES? What's going on?")
-						end
+			-- If we found all of this player's sub-folders, we can finally index their clothes!
+			print("YEP! We have all of the necessary references!")
+			-- If they're using RH hair, shoes, and/or a skirt, list those first, as they can't use more than one of each.
+			-- Also, some hairstyles use meshes from the weird "ReplicatedHair" folder. They're named "HairLocal" instead.
+			local temp_hairModel:Model?	= ESFolder.Hair:FindFirstChild("Hair") or ESFolder.Hair:FindFirstChild("HairLocal")
+			if temp_hairModel then
+				AddListPart(
+					"Hair",
+					"🪮",
+					"ItemRH",
+					{"Hair", temp_hairModel.Name, temp_hairModel:GetDebugId()},
+					PlayerSelectParams.SelectedPlayer
+				)
+			else print("No hair was found...")
+			end
+			
+			if ESFolder.Heels:FindFirstChild("Heels") and ESFolder.Heels:FindFirstChild("Heels"):FindFirstChild("HeelName")
+			then
+				AddListPart(
+					ESFolder.Heels:FindFirstChild("Heels") and
+						ESFolder.Heels:FindFirstChild("Heels"):FindFirstChild("HeelName") and
+						ESFolder.Heels:FindFirstChild("Heels"):FindFirstChild("HeelName").Value or
+						"Heels or Shoes",
+					"👠",
+					"HeelsRH",
+					{
+						ESFolder.Heels:FindFirstChild("Heels"):FindFirstChild("HeelName") and
+							ESFolder.Heels:FindFirstChild("Heels"):FindFirstChild("HeelName").Value or "Heels"
+					},
+					PlayerSelectParams.SelectedPlayer
+				)
+			else print("No heels/shoes were found...")
+			end
+			
+			if ESFolder.Skirts:FindFirstChild("Skirt") and ESFolder.Skirts:FindFirstChild("Skirt"):FindFirstChild("SkirtName")
+			then
+				AddListPart(
+					ESFolder.Skirts:FindFirstChild("Skirt") and
+						ESFolder.Skirts:FindFirstChild("Skirt"):FindFirstChild("SkirtName") and
+						ESFolder.Skirts:FindFirstChild("Skirt"):FindFirstChild("SkirtName").Value or
+						"Skirt",
+					"👗",
+					"ItemRH",
+					{
+						"Skirts",
+						ESFolder.Skirts:FindFirstChild("Skirt"):FindFirstChild("SkirtName") and
+							ESFolder.Skirts:FindFirstChild("Skirt"):FindFirstChild("SkirtName").Value or "Skirt",
+						ESFolder.Skirts:FindFirstChild("Skirt"):GetDebugId()},
+					PlayerSelectParams.SelectedPlayer
+				)
+			else print("No skirt was found...")
+			end
+			
+			if ESFolder.Wings:FindFirstChild("Wings") then
+				AddListPart(
+					"Wings",
+					"⚪",
+					"ItemRH",
+					{"Wings", "Wings", ESFolder.Wings:FindFirstChild("Wings"):GetDebugId()},
+					PlayerSelectParams.SelectedPlayer
+				)
+			else print("No wings were found...")
+			end
+			
+			if #ESFolder.Accessories:GetChildren() > 0 then
+				AddListPart("Accessories (most clothes)", nil, "Header")
+				for _,item : Model in ESFolder.Accessories:GetChildren() do
+					if item:IsA("Model") and item:FindFirstChild("AccessoryName") then
+						AddListPart(
+							item:FindFirstChild("AccessoryName").Value,
+							if item:FindFirstChild("AccessoryName").Value:find("Halo") then "😇" else "🎀",
+							"ItemRH",
+							{"Accessories",item:FindFirstChild("AccessoryName").Value,item:GetDebugId()},
+							PlayerSelectParams.SelectedPlayer
+						)	-- TODO: I believe this can detect all character parts, but please look over it and make sure nothing's missing before keeping this!
+					else warn(item.Name .. " isn't a standard Accessory, apparently.")
 					end
-				else
-					warn("One of this character's folders didn't exist!")
-					print(tostring(temp_accessoryFolder))
-					print(tostring(temp_hairFolder))
-					print(tostring(temp_heelFolder))
-					print(tostring(temp_skirtFolder))
-					print(tostring(temp_wingFolder))
 				end
-			else
-				warn("WHERE IS EQUIPPED STORAGE?")
-				print(tostring(EquippedStorage))
 			end
 			return nil
 		end,
@@ -1506,8 +1683,7 @@ local SaveTypeDefs : {SaveType}			= {
 	["Chara"]							= {
 		ContentType						= "3D",
 		Get								= function(_saveParams : GetFuncParams, _contextIDs : {ValidIDValues})
-			DisplayToast("Mum-Ma, here's a slice of TOAST!", "🍞", 5)
-			print("Tried to save a character!", _contextIDs[1])
+			-- print("Tried to save a character!", _contextIDs[1])
 			local result:SaveReturnTypes= nil
 			local temp_player : Player?	= Players:FindFirstChild(_contextIDs[1])
 			if temp_player then
@@ -1594,7 +1770,69 @@ local SaveTypeDefs : {SaveType}			= {
 			
 			return result
 		end
-	}
+	},
+	--[[
+		ItemRH (General Royale High clothing item capturer)
+		Accesses the currently-selected Player's EquippedStorage sub-folders and tries to find matching clothing in a category.
+		
+		Expected context values:
+		[1]	Category/folder name (Accessories / Hair / Skirts / Wings, heels are saved by the HeelsRH SaveType)
+		[2]	Item model name
+		[3]	Model debug ID (used as fallback if a matching name isn't found)
+	]]--
+	["ItemRH"]							= {
+		ContentType						= "3D",
+		Get								= function(_saveParams : GetFuncParams, _contextIDs : {ValidIDValues})
+			local result : Model?		= nil	-- This contains the final Model, if anything was found/cloned.
+			local ESFolder				= GetESFolders(PlayerSelectParams.SelectedPlayer.Name)
+			
+			if not ESFolder[_contextIDs[1]] then
+				if not _saveParams.WindowHasCache then	-- Hide this toast if the player's saving using the in-window save button w/ cache.
+					DisplayToast(
+						"The requested item, " .. type(_contextIDs[2]) == "string" and _contextIDs[2] or "[Unknown]" ..
+							" isn't of a valid type, or its EquippedStorage sub-folder doesn't exist here.",
+						"⛔",
+						8.125
+					)
+				end
+				error("xCouldn't save this RH item.")
+			end
+			
+			-- First, see if there's a Model with this exact title. (There almost always should be, but y'never know...)
+			local temp_model : Model?	= ESFolder[_contextIDs[1]]:FindFirstChild(_contextIDs[2])
+			
+			-- Couldn't find the Model? Scan every item in the folder, looking for the fallback debug ID.
+			if not temp_model then
+				for _, item : Model? in ESFolder[_contextIDs[1]]:GetChildren() do
+					if item:GetDebugId() == _contextIDs[3] then
+						temp_model		= item
+						break
+					end
+				end
+			end
+			
+			if not temp_model then
+				if not _saveParams.WindowHasCache then	-- Hide this toast if the player's saving using the in-window save button w/ cache.
+					DisplayToast(
+						"Apologies, but " .. type(_contextIDs[2]) == "string" and _contextIDs[2] or "[Unknown]" ..
+							" couldn't be found. The player may have unequipped it since you scanned them.",
+						"⛔",
+						8.125
+					)
+				end
+				error("xItem wasn't found in the folder.")
+			end
+			
+			--[[
+				Figure out this item's title, toggle, and variation info, and update its name and attributes appropriately.
+				Don't do this for hair and wings, which don't include their title in their Model name or a StringValue.
+			]]--
+			result = temp_model:Clone()
+			if _contextIDs[1] ~= "Hair" and _contextIDs[1] ~= "Wings" then AssignDescriptiveRHItemName(false, result) end
+			
+			return result
+		end
+	},
 }
 
 -- Scans through a game/place-specific "override list", adding/removing ScanTypes as requested.
@@ -1902,7 +2140,7 @@ function DisplayToast(_text : string, _icon : string, _time : number)
 		-- Clone and customize the toast template.
 		local newToast			= Template_Toast:Clone()
 		newToast.Message.Text	= type(_text) == "string" and _text or "No text was specified for this toast."
-		newToast.Icon.Text		= (type(_text) == "string" and _icon:len() < 3 and _icon) or "❔"
+		newToast.Icon.Text		= _icon	-- (type(_text) == "string" and _icon:len() < 3 and _icon) or "❔"
 		newToast.LayoutOrder	= HighestToastNumber
 		newToast.Visible		= true
 		newToast.Parent			= GUI_ToastBounds

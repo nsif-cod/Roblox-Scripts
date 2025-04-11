@@ -156,7 +156,7 @@ Conn_ChildAdded = GUI_Scene.Parent.ChildAdded:Connect(function(_newChild)
 		local temp_rightFoot			= _newChild:FindFirstChild("RightFoot")
 		if _newChild:FindFirstChildOfClass("Humanoid") and temp_leftFoot and temp_rightFoot then
 			local temp_midpoint : Vector3 = temp_leftFoot.CFrame:Lerp(temp_rightFoot.CFrame, 0.5).Position
-			GUI_Scene:PivotTo(CFrame.new(0, Vector3.yAxis * temp_midpoint.Y, 0)
+			GUI_Scene:PivotTo(CFrame.new(0, Vector3.yAxis * temp_midpoint.Y, 0))
 		else	-- Otherwise, if this is a Model, move the floor to half its height, which should align it with its base most of the time.
 			local _, temp_size = _newChild:GetBoundingBox()
 			if temp_size then temp_floorHeight = -(temp_size.Y)/2 end
