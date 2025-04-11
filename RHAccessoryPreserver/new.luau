@@ -986,36 +986,37 @@ local function GetESFolders(_playerName : string) :
 		Heels								: Folder?,
 		Skirts								: Folder?,
 		Wings								: Folder?
-	}
+	}?
 	local FoundFolders						= {}
 	local EquippedStorage:Folder?			= workspace:FindFirstChild("EquippedStorage")
 	
+	-- Try to find all of this Player's folders. If a single one isn't there, bail and return nil to the caller.
 	if EquippedStorage then
 		FoundFolders.Accessories			= IterateChildHierarchy(EquippedStorage, {
 			{Name = "Accessories",							Type = "FindFirstChild"},
 			{Name = PlayerSelectParams.SelectedPlayer.Name,	Type = "FindFirstChild"}
 		})
-		print(tostring(FoundFolders.Accessories))
+		if not FoundFolders.Accessories then return nil end
 		FoundFolders.Hair				= IterateChildHierarchy(EquippedStorage, {
 			{Name = "Hair",									Type = "FindFirstChild"},
 			{Name = PlayerSelectParams.SelectedPlayer.Name,	Type = "FindFirstChild"}
 		})
-		print(tostring(FoundFolders.Hair))
+		if not FoundFolders.Hair then return nil end
 		FoundFolders.Heels				= IterateChildHierarchy(EquippedStorage, {
 			{Name = "Heels",								Type = "FindFirstChild"},
 			{Name = PlayerSelectParams.SelectedPlayer.Name,	Type = "FindFirstChild"}
 		})
-		print(tostring(FoundFolders.Heels))
+		if not FoundFolders.Heels then return nil end
 		FoundFolders.Skirts				= IterateChildHierarchy(EquippedStorage, {
 			{Name = "Skirts",								Type = "FindFirstChild"},
 			{Name = PlayerSelectParams.SelectedPlayer.Name,	Type = "FindFirstChild"}
 		})
-		print(tostring(FoundFolders.Skirts))
+		if not FoundFolders.Skirts then return nil end
 		FoundFolders.Wings				= IterateChildHierarchy(EquippedStorage, {
 			{Name = "Wings",								Type = "FindFirstChild"},
 			{Name = PlayerSelectParams.SelectedPlayer.Name,	Type = "FindFirstChild"}
 		})
-		print(tostring(FoundFolders.Wings))
+		if not FoundFolders.Wings then return nil end
 	else DisplayToast("Somehow, EquippedStorage just isn't here...?", "❔", 4)
 	end
 	
@@ -1315,7 +1316,7 @@ local DetectTypeDefs : {ScanType}			= {
 			AddListPart("Full character...", "🧑", "CharaRH", {}, PlayerSelectParams.SelectedPlayer)
 			
 			local ESFolder					= GetESFolders(PlayerSelectParams.SelectedPlayer.Name)
-			if not ESFolder.Accessories or not ESFolder.Hair or not ESFolder.Heels or ESFolder.Skirts or not ESFolder.Wings then
+			if not ESFolder then
 				DisplayToast(
 					"One of this player's EquippedStorage folders couldn't be found.",
 					"🚫",
@@ -1325,7 +1326,7 @@ local DetectTypeDefs : {ScanType}			= {
 			end
 			
 			-- If we found all of this player's sub-folders, we can finally index their clothes!
-			print("YEP! We have all of the necessary references!")
+			
 			-- If they're using RH hair, shoes, and/or a skirt, list those first, as they can't use more than one of each.
 			-- Also, some hairstyles use meshes from the weird "ReplicatedHair" folder. They're named "HairLocal" instead.
 			local temp_hairModel:Model?	= ESFolder.Hair:FindFirstChild("Hair") or ESFolder.Hair:FindFirstChild("HairLocal")
