@@ -995,22 +995,28 @@ local function GetESFolders(_playerName : string) :
 			{Name = "Accessories",							Type = "FindFirstChild"},
 			{Name = PlayerSelectParams.SelectedPlayer.Name,	Type = "FindFirstChild"}
 		})
+		print(tostring(FoundFolders.Accessories))
 		FoundFolders.Hair				= IterateChildHierarchy(EquippedStorage, {
 			{Name = "Hair",									Type = "FindFirstChild"},
 			{Name = PlayerSelectParams.SelectedPlayer.Name,	Type = "FindFirstChild"}
 		})
+		print(tostring(FoundFolders.Hair))
 		FoundFolders.Heels				= IterateChildHierarchy(EquippedStorage, {
 			{Name = "Heels",								Type = "FindFirstChild"},
 			{Name = PlayerSelectParams.SelectedPlayer.Name,	Type = "FindFirstChild"}
 		})
+		print(tostring(FoundFolders.Heels))
 		FoundFolders.Skirts				= IterateChildHierarchy(EquippedStorage, {
 			{Name = "Skirts",								Type = "FindFirstChild"},
 			{Name = PlayerSelectParams.SelectedPlayer.Name,	Type = "FindFirstChild"}
 		})
+		print(tostring(FoundFolders.Skirts))
 		FoundFolders.Wings				= IterateChildHierarchy(EquippedStorage, {
 			{Name = "Wings",								Type = "FindFirstChild"},
 			{Name = PlayerSelectParams.SelectedPlayer.Name,	Type = "FindFirstChild"}
 		})
+		print(tostring(FoundFolders.Wings))
+	else DisplayToast("Somehow, EquippedStorage just isn't here...?", "❔", 4)
 	end
 	
 	return FoundFolders
