@@ -1,7 +1,7 @@
 --[[
 	ROYALE HIGH ACCESSORY PRESERVER V2		|
 	PROUDLY MADE BY XANE MYERS IN APRIL 2025|
-	LAST UPDATED APRIL 11TH, 2025			|
+	LAST UPDATED APRIL 12TH, 2025			|
 	----------------------------------------/
 	An amazing psuedo-sequel to an already powerful script, used for saving various (mostly 3D) assets from Roblox experiences,
 	including but no longer limited to Royale High! Run this script (preferably using Infinite Fun's 'rhsave' command) then tap
@@ -119,7 +119,38 @@ local DEF_PREVIEW_MSG	= "Select an item from the left-side list to preview it he
 
 local DEF_GROUP_NAME	= "Untitled Group"	-- Initial save sub-folder's name
 
-local COLOR_WHITE = Color3.new(1, 1, 1)
+local COLOR_WHITE		= Color3.new(1, 1, 1)
+local COLOR_ANON_SKIN	= Color3.new(192, 192, 192)
+
+local R15_BODY_PARTS	= {	-- The standard R15 body part names
+	"LowerTorso",
+	"UpperTorso",
+	"Head",
+	"LeftUpperArm",
+	"LeftLowerArm",
+	"LeftHand",
+	"RightUpperArm",
+	"RightLowerArm",
+	"RightHand",
+	"LeftUpperLeg",
+	"LeftLowerLeg",
+	"LeftFoot",
+	"RightUpperLeg",
+	"RightLowerLeg",
+	"RightFoot"
+}
+
+local RH_FACE_DECALS	= {	-- Royale High's "custom face" layers
+	"eyes",
+	"mouth",
+	"extra"
+}
+
+local RH_UNWANTED_ICONS	= {	-- Names of unwanted overhead status indicators like the Dress Up/try on/shopping icons.
+	"CharacterCreationIcon",	-- Dressing up
+	"ShopIcon",					-- Shopping
+	"TryOnIcon"					-- TODO: Save the "try on" icon and get its name!
+}
 
 --[[
 	Roblox2Lua
@@ -149,6 +180,7 @@ GUICarrier_Commands.BorderSizePixel = 0
 GUICarrier_Commands.Position = UDim2.fromScale(0.625, 0.1)
 GUICarrier_Commands.Size = UDim2.fromScale(0.225, 0.1125)
 GUICarrier_Commands.Visible = true
+GUICarrier_Commands.ZIndex = 2	-- Ensure this GUI stays visible over toasts (brief notifications).
 GUICarrier_Commands.Name = "CommandPalette"
 GUICarrier_Commands.Parent = GUI_Base
 
@@ -401,8 +433,8 @@ GUI_Window.Active = true
 GUI_Window.AnchorPoint = Vector2.one / 2
 GUI_Window.BackgroundColor3 = Color3.new(0.180392, 0.180392, 0.196078)
 GUI_Window.BorderSizePixel = 0
-GUI_Window.Position = UDim2.new(0.5, 0, 0.5, 0)
-GUI_Window.Size = UDim2.new(0.725000024, 0, 0.899999976, 0)
+GUI_Window.Position = UDim2.fromScale(0.5, 0.5)
+GUI_Window.Size = UDim2.fromScale(0.725, 0.9)
 GUI_Window.Visible = false
 GUI_Window.ZIndex = 2
 GUI_Window.Name = "WindowBack"
@@ -423,7 +455,7 @@ temp_z_newGUI2.TextXAlignment = Enum.TextXAlignment.Left
 temp_z_newGUI2.AnchorPoint = Vector2.xAxis / 2
 temp_z_newGUI2.BackgroundColor3 = Color3.new(0.686275, 0.678431, 0.658824)
 temp_z_newGUI2.BorderSizePixel = 0
-temp_z_newGUI2.Position = UDim2.new(0.5, 0, 0, 0)
+temp_z_newGUI2.Position = UDim2.fromScale(0.5, 0)
 temp_z_newGUI2.Size = UDim2.new(1, 0, 0, 30)
 temp_z_newGUI2.Visible = true
 temp_z_newGUI2.Name = "TitleBar"
@@ -985,6 +1017,48 @@ local function GetESFolders(_playerName : string) :
 	return FoundFolders
 end
 
+--[[
+	<custom><nb>
+	Tries to remove any player-specific modifications (other than clothing colors), turning every saved clothing Model
+	and full character model into a neutral, light-grey humanoid with a basic name and default Roblox smile face.
+	
+	This function should only be used when saving individual clothes (and shoes, which can save the whole character),
+	since the user probably wants to save full characters/outfits as-is.
+	
+	If the second parameter is **true**, this function's for loop will do additional Humanoid and R15 body part
+	checks, which may slow down this process. For most accessories, it should be kept as **false**, so it just
+	recolors extra skin tone parts (which are always named "colored*leg*", even for other body parts).
+]]--
+local function GeneralizeCharacter(_root : Model, _doCharChecks : boolean)
+	for _,desc : MeshPart in _root:GetDescendants() do
+		if desc:IsA("BasePart") and desc.Name == "coloredleg" then	-- All "coloredleg" parts are always recolored.
+			desc.Color = COLOR_ANON_SKIN
+		elseif _doCharChecks then
+			if
+				desc:IsA("MeshPart") and	-- Just recolor visible R15 body meshes, not the small blocks used by modern heels.
+				table.find(R15_BODY_PARTS, desc.Name) and	-- Is this one of the standard R15 body parts?
+				desc.Parent:FindFirstChildOfClass("Humanoid")	-- Is this body part inside a Model with a Humanoid? (It's an R15 part!)
+			then
+				if desc.Transparency > 0.999 then desc.Transparency = 0 end	-- Reveal hidden R15 body parts like the arms/torso.
+				desc.Color = COLOR_ANON_SKIN
+			elseif desc.Parent.Name == "Head" and desc:IsA("Decal") then	-- If this is a face Decal, consider messing with it.
+				if desc.Name == "face" then desc.Texture = "144080495"	-- Forcibly use the default smile texture (the hi-res Catalog ver.)
+				elseif table.find(RH_FACE_DECALS, desc.Name) then desc:Destroy()	-- Remove any extra RH face layers.
+				end
+			elseif desc:IsA("BillboardGui") then
+				if desc.Parent.Name == "Head" and desc.Name == "NameTag" then
+					desc.Enabled = false
+					local temp_label : TextLabel? = desc:FindFirstChildOfClass("TextLabel")
+					if temp_label then temp_label.Text = "Character" end
+				elseif table.find(RH_UNWANTED_ICONS, desc.Name) then desc:Destroy() end	-- Any other RH icon should be removed.
+			elseif desc:IsA("Humanoid") then
+				desc.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None	-- Hide the built-in username display.
+				desc.DisplayName = "Character"										-- Give this character a useless name.
+			end
+		end
+	end
+end
+
 -- STATIC DATA
 type ValidIDValues							= string|number
 
@@ -1014,8 +1088,12 @@ local PLACE_ID								= game.PlaceId
 local TI_TOAST_FADEIN						= TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
 local TI_TOAST_FADEOUT						= TweenInfo.new(0.625, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
 
-local function AssignDescriptiveRHItemName(_isFurni : boolean, Target : Model)
+local function AssignDescriptiveRHItemName(_isFurni : boolean, Target : Model, _heelsModel : Model?)
 	if not Target then return false end	-- This function needs a Model, as it will modify it, adding attributes and renaming it.
+	local ModelNameSrc : Model				= Target	-- For most clothes, the name StringValue is within the target Model.
+	if _heelsModel and _heelsModel.Name == "Heels" then	-- For heels, the target might be a full character, not the dummy "Heels" model
+		ModelNameSrc						= _heelsModel	-- that has the HeelName instance we want. If this is that, use ITS name.
+	end
 	
 	-- Set up these reference variables, which were used by the RHAPv1 function this code was imported from.
 	local GUI_Base							= nil
@@ -1105,13 +1183,13 @@ local function AssignDescriptiveRHItemName(_isFurni : boolean, Target : Model)
 		end
 	else	-- Otherwise, there's still hope! See if the target contains a StringValue with its name!
 		local temp_name:StringValue?	=
-			Target:FindFirstChild("HeelName") or
-			Target:FindFirstChild("AccessoryName") or
-			Target:FindFirstChild("SkirtName") or
-			Target:FindFirstChild("NameTag")	-- Dorm furniture
+			ModelNameSrc:FindFirstChild("HeelName") or
+			ModelNameSrc:FindFirstChild("AccessoryName") or
+			ModelNameSrc:FindFirstChild("SkirtName") or
+			ModelNameSrc:FindFirstChild("NameTag")	-- Dorm furniture
 		if temp_name then
 			if GUI_Base == GUIBase_Furniture then	-- Dorm furniture can include a NumberValue with its toggle number inside.
-				local ToggleValue : NumberValue? = Target:FindFirstChild("ToggleIndex")
+				local ToggleValue : NumberValue? = ModelNameSrc:FindFirstChild("ToggleIndex")
 				if ToggleValue then	-- If the toggle number Instance exists, use the furniture's name and toggle number as its title.
 					ToggleNum = ToggleValue.Value
 					SaveName = temp_name.Value .. " T" .. ToggleValue.Value
@@ -1284,7 +1362,7 @@ local DetectTypeDefs : {ScanType}			= {
 					"🚫",
 					3.5
 				)
-				return "xCouldn't find player's ES folders..."
+				return "Couldn't find player's ES folders...x"
 			end
 			
 			-- If we found all of this player's sub-folders, we can finally index their clothes!
@@ -1634,7 +1712,10 @@ type SaveReturnTypes					= (string?|Model?|Tool?|ScreenGui?|Frame?)
 type GetFuncParams						= {			-- This is TRUE if the user taps the window's save button and there's a pre-saved
 	WindowHasCache						: boolean,	-- "cached" Model/GUI that could be saved instead of saving the "live" version of it.
 	Previewing							: boolean,	-- Is this model/GUI clone meant for the window preview? If FALSE, it's a full save.
+	-- TODO: Add a fake "checkbox" to the window that toggles a bool variable like the one below, which SaveFlag1 will use the state of.
 }
+-- In the future, add a fake checkbox to the window that toggles this variable.
+local SaveTypeFlag1 : boolean			= true		-- Changes how some SaveTypes clone and modify their targets. (RH types anonymize.)
 
 type SaveType							= {
 	ContentType							: "None"|"2D"|"3D",
@@ -1764,7 +1845,7 @@ local SaveTypeDefs : {SaveType}			= {
 						8.125
 					)
 				end
-				error("xCouldn't save this RH item.")
+				error("Couldn't save this RH item.x")
 			end
 			
 			-- First, see if there's a Model with this exact title. (There almost always should be, but y'never know...)
@@ -1789,7 +1870,7 @@ local SaveTypeDefs : {SaveType}			= {
 						8.125
 					)
 				end
-				error("xItem wasn't found in the folder.")
+				error("Item wasn't found in the folder.x")
 			end
 			
 			--[[
@@ -1799,9 +1880,127 @@ local SaveTypeDefs : {SaveType}			= {
 			result = temp_model:Clone()
 			if _contextIDs[1] ~= "Hair" and _contextIDs[1] ~= "Wings" then AssignDescriptiveRHItemName(false, result) end
 			
+			--[[
+				Before giving the Model to the caller, see if the user wants to "anonymize" the item. For RH clothing (which
+				this type saves), this mainly recolors all "skin" parts to a generic light grey mannequin-like color, leaving
+				the rest of the model unchanged. (If this was CharaRH, this would also change the character's name and face.)
+			]]--
+			if SaveTypeFlag1 then
+				for _,desc : BasePart in result:GetDescendants() do
+					if desc:IsA("BasePart") and desc.Name == "coloredleg" then	-- For some reason, all skin parts have this name. 🙄
+						desc.Color = COLOR_ANON_SKIN
+					end
+				end
+			end
+			
 			return result
 		end
 	},
+	--[[
+		⚠️ TODO: This class isn't complete yet! Just because it has a definition, that doesn't mean it's functional or working as intended!
+		
+		HeelsRH (Royale High shoe/heel saver)
+		Finds and clones a character's equipped footwear, accounting for both legacy shoes (which attach to your legs
+		like most basic accessory models) and modern heels (which completely replace their R15 leg parts). For the
+		latter kind of shoes, the character will be reverted into a "woman rig" (since its body parts are always
+		there), and if the model should be anonymized, its name, skin tone, and face will be generalized, since the
+		replaced leg parts are designed to connect to the character's LowerTorso.
+		
+		Unlike most SaveTypes, HeelsRH does NOT expect any context values, as heels have a consistent structure.
+	]]--
+	["HeelsRH"]							= {
+		ContentType						= "3D",
+		Get								= function(_saveParams : GetFuncParams, _contextIDs : {ValidIDValues})
+			local result : Model?		= nil	-- This contains the final Model, if anything was found/cloned.
+			local ESFolder				= GetESFolders(PlayerSelectParams.SelectedPlayer.Name)
+			local AreModernShoes		= false
+			
+			-- After getting the EquippedStorage references, make sure they're actually there before proceeding.
+			if not ESFolder then
+				if not _saveParams.WindowHasCache then	-- Hide this toast if the player's saving using the in-window save button w/ cache.
+					DisplayToast(
+						"The EquippedStorage folder or one of its expected sub-folders couldn't be located.",
+						"⛔",
+						4.375
+					)
+				end
+				error("Couldn't save a character's heels.x")
+			end
+			
+			--[[
+				First, find out if this player's wearing modern or legacy shoes. This is easy, though; Simply check their lower leg's
+				type! If it's a Part, these are modern shoes.
+			]]--
+			local PlayerChar			= PlayerSelectParams.SelectedPlayer.Character
+			if not PlayerChar then
+				if not _saveParams.WindowHasCache then	-- Hide this toast if the player's saving using the in-window save button w/ cache.
+					DisplayToast(
+						"Couldn't get a reference to the selected Player's character.",
+						"⛔",
+						3.25
+					)
+				end
+				error("Couldn't find the selected Player's character.x")
+			end
+			local temp_upperLegPart		= PlayerChar:FindFirstChild("LeftUpperLeg")
+			if not temp_upperLegPart then
+				if not _saveParams.WindowHasCache then	-- Hide this toast if the player's saving using the in-window save button w/ cache.
+					DisplayToast(
+						"That character's upper left leg part couldn't be found. Make sure they're rendered/visible to you.",
+						"⛔",
+						5.675
+					)
+				end
+				error("Couldn't find that player's upper left leg part.x")
+			end
+			
+			-- When this flag's set, the player's character is saved instead of the Heels model.
+			AreModernShoes				= PlayerChar:FindFirstChild("LeftUpperLeg") and PlayerChar:FindFirstChild("LeftUpperLeg"):IsA("Part")
+			
+			local HeelModel : Model?	= ESFolder.Heels:FindFirstChildOfClass("Model")
+			if not HeelModel then
+				if not _saveParams.WindowHasCache then	-- Hide this toast if the player's saving using the in-window save button w/ cache.
+					DisplayToast(
+						"That character's Heels model couldn't be found. Make sure they're rendered/visible to you.",
+						"⛔",
+						5.333
+					)
+				end
+				error("Couldn't find that player's Heels model in EquippedStorage.x")
+			end
+			
+			--[[
+				Depending on what kind of shoes this character's wearing, either save their full character model (modern shoes)
+				or just the Model in the Heels sub-folder (legacy/classic RH shoes). Since player characters can't be cloned by
+				default, it's briefly made "archivable" until it's cloned as this function's "result" Model.
+				
+				From here, the code flow merges, the clone is given a meaningful name/attributes, then it is anonymized; This
+				affects the model's skin tone, but it changes modern shoe model clones even more, turning them into mannequins.
+			]]--
+			if AreModernShoes then
+				local temp_archivable	= PlayerChar.Archivable
+				if not temp_archivable then PlayerChar.Archivable = true end
+				
+				result					= PlayerChar:Clone()
+				PlayerChar.Archivable	= temp_archivable
+			else
+				result					= HeelModel:Clone()
+			end
+			
+			AssignDescriptiveRHItemName(false, result, HeelModel)	-- This call should work for both kinds of shoes...hopefully.
+			
+			--[[
+				Before giving the Model to the caller, see if the user wants to "anonymize" the item. For RH clothing (which
+				this type saves), this mainly recolors all "skin" parts to a generic light grey mannequin-like color, leaving
+				the rest of the model unchanged. (If this was CharaRH, this would also change the character's name and face.)
+			]]--
+			if SaveTypeFlag1 then
+				GeneralizeCharacter(result, AreModernShoes)	-- If these are modern shoes, this will more thoroughly modify the Model.
+			end
+			
+			return result
+		end
+	}
 }
 
 -- Scans through a game/place-specific "override list", adding/removing ScanTypes as requested.
@@ -2239,13 +2438,13 @@ local function SaveItem(_fallbackCache : boolean, _override : boolean)
 		if not savedContent then
 			if tryUsingCache then
 				FinalItem						= GUI_CurrentCache:GetChildren()[1]:Clone()
-				DisplayToast("Using preview fallback " .. FinalItem.ClassName .. ".", "ℹ️", 3.5)
+				DisplayToast("Using preview fallback " .. FinalItem.ClassName .. ".", "ℹ️", 2.75)
 			else
 				error("The target couldn't be found/cloned.")
 			end
 		else
 			FinalItem							= savedContent
-			DisplayToast("Using live " .. FinalItem.ClassName .. ".", "ℹ️", 3)
+			-- DisplayToast("Using live " .. FinalItem.ClassName .. ".", "ℹ️", 3)
 		end
 		
 		-- We're almost done! First, see if the user's sub-folder exists, and if it doesn't, create it now.
@@ -2269,7 +2468,7 @@ local function SaveItem(_fallbackCache : boolean, _override : boolean)
 						"🙅",
 						9.5
 					)
-					error("xCouldn't move the item.")	-- This error shouldn't appear, as it just stops execution without success.
+					error("Couldn't move the item.x")	-- This error shouldn't appear, as it just stops execution without success.
 				else
 					temp_duplicate:Destroy()	-- Immediately remove the original item, which is being replaced.
 				end
@@ -2295,7 +2494,7 @@ local function SaveItem(_fallbackCache : boolean, _override : boolean)
 	IsBusy = false
 	ChangeSaveButtonState(true)	-- We're done, so the save button should be safe to re-enable.
 	
-	if not success and errormsg and type(errormsg) == "string" and errormsg:len()>0 and errormsg:sub(1,1) ~= "x" then
+	if not success and errormsg and type(errormsg) == "string" and errormsg:len()>0 and errormsg:sub(-1,-1) ~= "x" then
 		DisplayToast("An error occurred while trying to save your target: " .. tostring(errormsg) or "[no error provided]", "🚫", 8.5)
 	end
 end
