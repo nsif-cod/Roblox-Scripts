@@ -920,13 +920,6 @@ type TypeDataStorageTypes					= {	-- Type definition for the table below.
 		EquippedStorage						: Folder?
 	}
 }
-local TDStorage : TypeDataStorageTypes	= {		-- An array SaveTypes can store references and other info in, like a psuedo-cache.
-	["RHRefs"]								= {
-		GUIBase_Clothing					= nil,
-		GUIBase_Furniture					= nil,
-		EquippedStorage						= nil
-	}
-}
 
 --[[
 	A weird, hackish table used for types that let the user pick a target player first. Since this reuses the existing list/indexing
@@ -942,38 +935,6 @@ local PlayerSelectParams						: {
 		SelectedPlayer							= nil,	-- Player the user picked.
 		RealScanType							= "",	-- The intended ScanType that requested this Player selection.
 }
-
--- Code from RH Accessory Preserver v1 which grabs references to RH's clothing/furniture GUIs and the EquippedStorage folder.
-local function RefreshRHInstanceReferences()
-	if not PlayerGui or not PlayerGui.Parent then
-		PlayerGui							= LocalPlayer.PlayerGui
-		if not PlayerGui or not PlayerGui.Parent then error("PlayerGui somehow didn't exist while looking for RH-specific instances.") end
-	end
-	
-	TDStorage.RHRefs.EquippedStorage		= workspace:FindFirstChild("EquippedStorage")
-	
-	--[[
-		Though it looks like both use the same toggle/variation seleciton GUI, clothes and furniture actually use separate copies of the
-		same GUI design; Everything inside both of the frames has the same layout, so this script will change between them depending on
-		what it's targetting.
-	]]--
-	local temp_clothingGuiRef				= PlayerGui:FindFirstChild("PreviewToggles")
-	if temp_clothingGuiRef then
-		TDStorage.RHRefs.GUIBase_Clothing	= temp_clothingGuiRef:FindFirstChild("PreviewTogglesFrame")
-	end
-	
-	local temp_furniDecorModeGui 			= PlayerGui:FindFirstChild("DecorateModeGui")
-	TDStorage.RHRefs.GUIBase_Furniture		= nil
-	if temp_furniDecorModeGui then	-- This GUI only exists in Campus 3's Castle Dorms and Campus 4, and will just be nil outside of them.
-		TDStorage.RHRefs.GUIBase_Furniture	= temp_furniDecorModeGui:FindFirstChild("TogglesFrameNEW")
-	end
-	
-	-- Clear these now-unnecessary variables now, in case it frees up memory.
-	temp_furniDecorModeGui					= nil
-	temp_clothingGuiRef						= nil
-	
-	return true
-end
 
 --[[
 	<custom><nb>
@@ -1976,11 +1937,6 @@ local function SelectAndShowItem(_itemNum : number)
 				entry.ListInstance.BackgroundTransparency = if i == _itemNum then 0 else 1
 			end
 			
-			-- Is this a RH-specific SaveType (ends in "RH")? Refresh its Instance references.
-			if ItemList[_itemNum].SaveType:sub(-2,-1) == "RH" then
-				RefreshRHInstanceReferences()
-			end
-			
 			-- Make sure this item's SaveType and its "get" function exist before trying to preview it. If they don't, display a Toast.
 			if SaveTypeDefs[ItemList[_itemNum].SaveType] and SaveTypeDefs[ItemList[_itemNum].SaveType].Get then
 				-- Clone the relevant content (model, GUI, etc.) and place it in the correct viewer, based on its "ContentType" value.
@@ -2264,11 +2220,6 @@ local function SaveItem(_fallbackCache : boolean, _override : boolean)
 	ChangeSaveButtonState(false)	-- Disable save buttons until we're done saving this content.
 	
 	local success, errormsg						= pcall(function()
-		-- Are we saving something from Royale High? All RH-specific SaveTypes end in those letters. If we are, refresh its references!
-		if ItemList[SelectedIndex].SaveType:sub(-2,-1) == "RH" then
-			RefreshRHInstanceReferences()
-		end
-		
 		local FinalItem : SaveReturnTypes		= nil
 		local savedContent : SaveReturnTypes	= SaveTypeDefs[ItemList[SelectedIndex].SaveType].Get(
 			{
