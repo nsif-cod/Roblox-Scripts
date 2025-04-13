@@ -1,7 +1,7 @@
 --[[
 	ROYALE HIGH ACCESSORY PRESERVER V2		|
 	PROUDLY MADE BY XANE MYERS IN APRIL 2025|
-	LAST UPDATED APRIL 12TH, 2025			|
+	LAST UPDATED APRIL 13TH, 2025			|
 	----------------------------------------/
 	An amazing psuedo-sequel to an already powerful script, used for saving various (mostly 3D) assets from Roblox experiences,
 	including but no longer limited to Royale High! Run this script (preferably using Infinite Fun's 'rhsave' command) then tap
@@ -149,8 +149,17 @@ local RH_FACE_DECALS	= {	-- Royale High's "custom face" layers
 local RH_UNWANTED_ICONS	= {	-- Names of unwanted overhead status indicators like the Dress Up/try on/shopping icons.
 	"CharacterCreationIcon",	-- Dressing up
 	"ShopIcon",					-- Shopping
-	"TryOnIcon"					-- TODO: Save the "try on" icon and get its name!
+	"PreviewIcon"				-- Trying on store clothing
 }
+
+local RH_ES_FOLDER_NAMES= {
+	"Accessories",
+	"Hair",
+	"Heels",
+	"Skirts",
+	"Wings"
+}
+
 
 --[[
 	Roblox2Lua
@@ -742,6 +751,7 @@ if temp_z_newGUI2 then	-- If the scene model couldn't load above, ignore it and 
 	temp_z_newGUI2.Material = Enum.Material.SmoothPlastic
 	temp_z_newGUI2.PivotOffset = CFrame.new(Vector3.yAxis * -50)
 	-- temp_z_newGUI2.Size = Vector3.new(193.9214324951172, 175, 193.92144775390625)
+	temp_z_newGUI2.Transparency = 1	-- Hide the 3D scene, since the camera script isn't doing a good job aligning it to 3D models.
 	temp_z_newGUI2.Name = "PreviewScene"
 	temp_z_newGUI2.Parent = GUI_ModelViewer
 end
@@ -1029,31 +1039,56 @@ end
 	checks, which may slow down this process. For most accessories, it should be kept as **false**, so it just
 	recolors extra skin tone parts (which are always named "colored*leg*", even for other body parts).
 ]]--
-local function GeneralizeCharacter(_root : Model, _doCharChecks : boolean)
+type FixRHCharParams	= {
+	DoExtraChecks		: boolean,	-- Allows the function to make most changes other than just recoloring "coloredleg" parts.
+	SkinTone			: boolean,	-- Recolor all skin-colored R15 parts and "coloredleg" RH clothing parts to a neutral color.
+	Face				: boolean,	-- Remove RH-specific face layers and revert the face Decal to the default Roblox smile.
+	RPName				: ("hide"|"remove")?,	-- Hides or removes their RP name. Name will be replaced if this is the user's character.
+	LowerTorsoFix		: boolean,	-- Forcibly makes all modern shoe LowerTorso meshes visible. (They're hidden when wearing a skirt.)
+	AllR15Parts			: boolean,	-- Makes all un-replaced R15 body parts visible, handy for modern shoe character saves.
+	HumanoidName		: ("hide"|"change")?,	-- Hides the built-in overhead Humanoid name GUI and repalces it with "Character".
+	Clothing2D			: boolean,	-- Removes 2D Roblox clothing Instances (Shirt/Pants/ShirtGraphic).
+}
+
+local function FixRHCharacter(_root : Model, _param : FixRHCharParams)
 	for _,desc : MeshPart in _root:GetDescendants() do
-		if desc:IsA("BasePart") and desc.Name == "coloredleg" then	-- All "coloredleg" parts are always recolored.
+		if desc:IsA("BasePart") and desc.Name == "coloredleg" and _param.SkinTone then	-- All "coloredleg" parts are always recolored.
 			desc.Color = COLOR_ANON_SKIN
-		elseif _doCharChecks then
-			if
-				desc:IsA("MeshPart") and	-- Just recolor visible R15 body meshes, not the small blocks used by modern heels.
+		elseif _param.DoExtraChecks then
+			if desc:IsA("MeshPart") and	-- Just recolor visible R15 body meshes, not the small blocks used by modern heels.
 				table.find(R15_BODY_PARTS, desc.Name) and	-- Is this one of the standard R15 body parts?
-				desc.Parent:FindFirstChildOfClass("Humanoid")	-- Is this body part inside a Model with a Humanoid? (It's an R15 part!)
+				desc.Parent:FindFirstChildOfClass("Humanoid")	-- Is this body part inside a Model with a Humanoid? (R15 body part!)
 			then
-				if desc.Transparency > 0.999 then desc.Transparency = 0 end	-- Reveal hidden R15 body parts like the arms/torso.
-				desc.Color = COLOR_ANON_SKIN
-			elseif desc.Parent.Name == "Head" and desc:IsA("Decal") then	-- If this is a face Decal, consider messing with it.
-				if desc.Name == "face" then desc.Texture = "144080495"	-- Forcibly use the default smile texture (the hi-res Catalog ver.)
+				if desc.Transparency > 0.999 and _param.AllR15Parts then desc.Transparency = 0 end	-- Reveal every hidden R15 body part.
+				if _param.SkinTone then desc.Color = COLOR_ANON_SKIN end	-- Replace this part's skin tone/color if it's allowed.
+			elseif desc:IsA("Part") and desc.Name == "LowerTorso" and _param.LowerTorsoFix then
+				local Undergarment : Model? = desc:FindFirstChildOfClass("Model")
+				if Undergarment and Undergarment.Name == "LowerTorso" then	-- If this seems to be bloomers/shorts, let's make it opaque!
+					for _,piece in Undergarment:GetDescendants() do
+						if piece:IsA("BasePart") and piece.Transparency > 0.999 then piece.Transparency = 0 end
+					end
+				end
+			elseif desc.Parent.Name == "Head" and desc:IsA("Decal") and _param.Face then	-- If allowed, change their face texture(s)!
+				if desc.Name == "face" then desc.Texture = "rbxassetid://144080495"	-- Forcibly use the default smile texture.
 				elseif table.find(RH_FACE_DECALS, desc.Name) then desc:Destroy()	-- Remove any extra RH face layers.
 				end
 			elseif desc:IsA("BillboardGui") then
-				if desc.Parent.Name == "Head" and desc.Name == "NameTag" then
-					desc.Enabled = false
-					local temp_label : TextLabel? = desc:FindFirstChildOfClass("TextLabel")
-					if temp_label then temp_label.Text = "Character" end
+				if desc.Parent.Name == "Head" and desc.Name == "NameTag" and _param.RPName then
+					if _param.RPName == "hide" then
+						desc.Enabled = false
+						
+						--[[
+							-- If this is the user's character, hide their name, replacing it with "Character". (This is pointless.)
+							local temp_label : TextLabel? = desc:FindFirstChildOfClass("TextLabel")
+							if _root.Name == LocalPlayer.Name and temp_label then temp_label.Text = "Character" end
+						]]--
+					elseif _param.RPName == "remove" then desc:Destroy()
+					end
 				elseif table.find(RH_UNWANTED_ICONS, desc.Name) then desc:Destroy() end	-- Any other RH icon should be removed.
-			elseif desc:IsA("Humanoid") then
-				desc.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None	-- Hide the built-in username display.
-				desc.DisplayName = "Character"										-- Give this character a useless name.
+			elseif desc:IsA("Humanoid") and _param.HumanoidName then
+				desc.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None			-- Hide the built-in username display.
+				if _param.HumanoidName == "change" then desc.DisplayName = "Character" end	-- Give this character a useless name.
+			elseif desc:IsA("Shirt") or desc:IsA("Pants") or desc:IsA("ShirtGraphic") and _param.Clothing2D then desc:Destroy()
 			end
 		end
 	end
@@ -1897,8 +1932,6 @@ local SaveTypeDefs : {SaveType}			= {
 		end
 	},
 	--[[
-		⚠️ TODO: This class isn't complete yet! Just because it has a definition, that doesn't mean it's functional or working as intended!
-		
 		HeelsRH (Royale High shoe/heel saver)
 		Finds and clones a character's equipped footwear, accounting for both legacy shoes (which attach to your legs
 		like most basic accessory models) and modern heels (which completely replace their R15 leg parts). For the
@@ -1906,7 +1939,9 @@ local SaveTypeDefs : {SaveType}			= {
 		there), and if the model should be anonymized, its name, skin tone, and face will be generalized, since the
 		replaced leg parts are designed to connect to the character's LowerTorso.
 		
-		Unlike most SaveTypes, HeelsRH does NOT expect any context values, as heels have a consistent structure.
+		Unlike most SaveTypes, HeelsRH does NOT expect any context values, as heels have a consistent structure. This
+		could be problematic if this script is expanded to allow saving NPC character models, since those don't use
+		the normal EquippedStorage folder, using an internal clone of it, or just a bunch of Models instead.
 	]]--
 	["HeelsRH"]							= {
 		ContentType						= "3D",
@@ -1995,10 +2030,105 @@ local SaveTypeDefs : {SaveType}			= {
 				the rest of the model unchanged. (If this was CharaRH, this would also change the character's name and face.)
 			]]--
 			if SaveTypeFlag1 then
-				GeneralizeCharacter(result, AreModernShoes)	-- If these are modern shoes, this will more thoroughly modify the Model.
+				FixRHCharacter(
+					result, {
+						DoExtraChecks	= AreModernShoes,	-- If these are modern shoes, this will more thoroughly modify the Model.
+						SkinTone		= true,
+						Face			= true,
+						RPName			= "remove",
+						LowerTorsoFix	= true,	-- I prefer to always show this part, but heel-only characters won't be wearing a skirt.
+						AllR15Parts		= true,
+						HumanoidName	= "change",
+						Clothing2D		= true
+					}
+				)
 			end
 			
 			return result
+		end
+	},
+	--[[
+		CharaRH (Full RH player character models)
+		Saves full characters by temporarily moving their EquippedStorage sub-folders into the main model before
+		cloning them, maintaining all clothing welds and making the resulting model neater! Although this SaveType
+		has a short description, its code is more complex than this suggests.
+		
+		Unlike most SaveTypes, CharaRH doesn't use any context values, as players' characters and EquippedStorage
+		are always found within the workspace at workspace.EquippedStorage and workspace[username].
+	]]--
+	["CharaRH"]							= {
+		ContentType						= "3D",
+		Get								= function(_saveParams : GetFuncParams, _contextIDs : {ValidIDValues})
+			local result : Model?		= nil	-- This contains the final Model, if anything was found/cloned.
+			local ESFolder				= GetESFolders(PlayerSelectParams.SelectedPlayer.Name)
+			local FolderParents:{Folder}= {}	-- Will contain references to each ES player folder's parent.
+			-- After getting the EquippedStorage references, make sure they're actually there before proceeding.
+			if not ESFolder then
+				if not _saveParams.WindowHasCache then	-- Hide this toast if the player's saving using the in-window save button w/ cache.
+					DisplayToast(
+						"The EquippedStorage folder or one of its expected sub-folders couldn't be located.",
+						"⛔",
+						4.375
+					)
+				end
+				error("Couldn't save a complete character model.x")
+			end
+			
+			local PlayerChar			= PlayerSelectParams.SelectedPlayer.Character
+			if not PlayerChar then
+				if not _saveParams.WindowHasCache then	-- Hide this toast if the player's saving using the in-window save button w/ cache.
+					DisplayToast(
+						"Couldn't get a reference to the selected Player's character.",
+						"⛔",
+						3.25
+					)
+				end
+				error("Couldn't find the selected Player's character.x")
+			end
+			
+			-- Get references to each folder's parent; After cloning, the player's five sub-folders will be returned to these folders.
+			for _,name in RH_ES_FOLDER_NAMES do
+				table.insert(FolderParents, ESFolder[name].Parent)	-- Store a reference to this category's parent.
+				ESFolder[name].Parent	= PlayerChar				-- Move the sub-folder into the character model.
+				ESFolder[name].Name		= name						-- Name it after the category (instead of the player's username).
+			end
+			
+			local temp_archivable		= PlayerChar.Archivable		-- Store this Model's original "archivable" value.
+			if not PlayerChar.Archivable then PlayerChar.Archivable = true end
+			result = PlayerChar:Clone()								-- Clone the player's character now.
+			PlayerChar.Archivable		= temp_archivable			-- Revert our archivable flag modification.
+			
+			-- Finally, revert our changes, moving each ES sub-folder back and renaming them after the player's username again.
+			for i,name in RH_ES_FOLDER_NAMES do
+				local temp_folder:Folder= PlayerChar:FindFirstChild(name)
+				if temp_folder then
+					temp_folder.Name	= PlayerSelectParams.SelectedPlayer.Name
+					temp_folder.Parent	= FolderParents[i]
+				end
+			end
+			table.clear(FolderParents)
+			
+			--[[
+				Before giving the Model to the caller, see if the user wants to "anonymize" the item. For RH clothing (which
+				this type saves), this mainly recolors all "skin" parts to a generic light grey mannequin-like color, leaving
+				the rest of the model unchanged. (If this was CharaRH, this would also change the character's name and face.)
+			]]--
+			if SaveTypeFlag1 then
+				FixRHCharacter(
+					result, {
+						DoExtraChecks	= true,
+						SkinTone		= false,
+						Face			= false,
+						RPName			= "hide",
+						LowerTorsoFix	= true,	-- I shouldn't do this for accuracy, but this makes the character look more complete, so...
+						AllR15Parts		= false,
+						HumanoidName	= "hide",
+						Clothing2D		= false
+					}
+				)
+			end
+			
+			return result	-- And we're done! This SaveType only took just under 25 minutes to code, surprisingly!
 		end
 	}
 }
