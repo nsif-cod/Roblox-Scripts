@@ -37,7 +37,7 @@ local DISTANCE_LIMITS							= NumberRange.new(1.5, 15)	-- How far the camera can
 
 -- VARIABLES
 local CamOffset									= {
-	Distance									= 7,	-- How far the camera has moved away from the origin in studs.
+	Distance									= 10,	-- How far the camera has moved away from the origin in studs.
 	StartHeight									= 0,	-- Vertical positioning/angle in degrees (-90 to 90)
 	DragHeight									= 0,	-- Additional pitch adjustment added by the current drag.
 	StartAngle									= 0,	-- Camera's rotation around the origin (0-359)
@@ -118,27 +118,22 @@ Conn_InputEnded		= UserInputService.InputEnded:Connect(function(_input)
 	end
 end)
 
+-- This code just...didn't work AT ALL. TODO: Consider adding zoom in/out buttons to the main GUI that this script uses to update Distance.
 --[[
-	TODO: Implement zooming for touch devices/phones! Grab the current cam. distance, then continuously set the current distance to it
-	multiplied by scale. Obviously, clamp it so the camera can't get closer or further away from the model than a PC exploiter could.
-	Come to think of it, a smaller scale might represent a PINCH, so the range may need to be re-mapped so pinching INCREASES the final
-	distance, and vice versa.
+	Conn_TouchZoom		= GUI_Viewport.TouchPinch:Connect(function(_, _scale, _, _state)
+		if _state == Enum.UserInputState.End then
+			Touch_StartDistance = nil
+			return nil	-- After nil'ing the distance, end the function here.
+		elseif _state == Enum.UserInputState.Begin then	-- When a pinch begins, note the current distance. Pinches will multiply it (somehow).
+			Touch_StartDistance = CamOffset.Distance
+			DragStartPos = nil	-- Just to be safe, end a touch drag gesture if it was triggered before Roblox detected this pinch.
+		end
+		
+		-- Re-map and invert the scale range so pinching zooms out to the camera's max distance, and vice versa.
+		CamOffset.Distance = math.clamp(math.map(_scale,0, 3,DISTANCE_LIMITS.Max,DISTANCE_LIMITS.Min),DISTANCE_LIMITS.Min,DISTANCE_LIMITS.Max)
+		print("New scale is", _scale)
+	end)
 ]]--
-Conn_TouchZoom		= GUI_Viewport.TouchPinch:Connect(function(_, _scale, _, _state)
-	if _state == Enum.UserInputState.End then
-		Touch_StartDistance = nil
-		return nil	-- After nil'ing the distance, end the function here.
-	elseif _state == Enum.UserInputState.Begin then	-- When a pinch begins, note the current distance. Pinches will multiply it (somehow).
-		Touch_StartDistance = CamOffset.Distance
-		DragStartPos = nil	-- Just to be safe, end a touch drag gesture if it was triggered before Roblox detected this pinch.
-	end
-	
-	--[[
-		Re-map and invert the scale range so pinching zooms out to the camera's max distance, and vice versa.
-	]]
-	CamOffset.Distance = math.clamp(math.map(_scale,0, 3,DISTANCE_LIMITS.Max,DISTANCE_LIMITS.Min),DISTANCE_LIMITS.Min,DISTANCE_LIMITS.Max)
-	print("New scale is", _scale)
-end)
 
 Conn_ChildAdded = GUI_Scene.Parent.ChildAdded:Connect(function(_newChild)
 	if _newChild:IsA("Model") then
@@ -167,5 +162,8 @@ Conn_ChildAdded = GUI_Scene.Parent.ChildAdded:Connect(function(_newChild)
 		CamOffset.DragHeight	= 0
 		CamOffset.StartHeight	= 0
 		UpdateCameraPosition()
+		
+		-- Immediately override the new camera view with a sort of "isometric" view, just in case it's more useful than it.
+		if Camera then Camera.CFrame = CFrame.new(Vector3.one * 15, Vector3.zero) end
 	end
 end)
