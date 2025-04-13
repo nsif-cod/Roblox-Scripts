@@ -909,8 +909,9 @@ local SelectedIndex							= 0		-- The currently-selected ItemList index, used by
 local HighestToastNumber					= 0		-- Number incremented with each displayed toast to keep them in order, top to bottom.
 
 local SaveGroupName							= DEF_GROUP_NAME	-- Sub-folder to place the next saved item into.
-local ActiveToasts : {ToastDefinition}
+local ToastData : {ToastDefinition}
 											= {}	-- Array of references to visible, un-dismissed toast notification CanvasGroups.
+local ActiveToasts : number					= 0		-- A basic counter that tracks how many toasts are being shown to the user now.
 
 type TypeDataStorageTypes					= {	-- Type definition for the table below.
 	RHRefs									: {
@@ -2114,23 +2115,24 @@ ClearList()
 
 -- Tries to close a toast with a specific GUID. Once a toast starts fading out, this won't affect it.
 local function CloseToast(_guid)
-	if ActiveToasts[_guid] and type(ActiveToasts[_guid]) == "table" and	-- Ensure this toast is linked (usable) before continuing.
-		type(ActiveToasts[_guid].GUIElement) == "userdata"
+	if ToastData[_guid] and type(ToastData[_guid]) == "table" and	-- Ensure this toast is linked (usable) before continuing.
+		type(ToastData[_guid].GUIElement) == "userdata"
 	then
 		-- If this toast's fading in, pause that tween, then replace it with a new one that fades out.
-		if ActiveToasts[_guid].Tween and ActiveToasts[_guid].Tween.PlaybackState ~= Enum.PlaybackState.Completed then
-			ActiveToasts[_guid].Tween:Pause()
-			ActiveToasts[_guid].Tween:Destroy()
-			ActiveToasts[_guid].Tween = nil
+		if ToastData[_guid].Tween and ToastData[_guid].Tween.PlaybackState ~= Enum.PlaybackState.Completed then
+			ToastData[_guid].Tween:Pause()
+			ToastData[_guid].Tween:Destroy()
+			ToastData[_guid].Tween = nil
 		end
 		
 		-- Use a Tween to fade out the toast, then destroy it using Debris.
-		ActiveToasts[_guid].Tween = TweenService:Create(ActiveToasts[_guid].GUIElement, TI_TOAST_FADEOUT, {GroupTransparency = 1}):Play()
-		Debris:AddItem(ActiveToasts[_guid].GUIElement, TI_TOAST_FADEOUT.Time)
+		ToastData[_guid].Tween = TweenService:Create(ToastData[_guid].GUIElement, TI_TOAST_FADEOUT, {GroupTransparency = 1}):Play()
+		Debris:AddItem(ToastData[_guid].GUIElement, TI_TOAST_FADEOUT.Time)
+		ActiveToasts -= 1	-- Also, stop tracking this toast so it doesn't lead to another old toast closing itself.
 		
 		-- Remove this GUID from the list ASAP, which should stop DisplayToast()'s delayed CloseToast() call.
-		table.clear(ActiveToasts[_guid])
-		ActiveToasts[_guid].GUIElement = nil
+		ToastData[_guid].GUIElement = nil
+		table.clear(ToastData[_guid])
 	end
 end
 
@@ -2153,10 +2155,28 @@ function DisplayToast(_text : string, _icon : string, _time : number)
 		newToast.Parent			= GUI_ToastBounds
 		
 		local Tween_FadeIn		= TweenService:Create(newToast, TI_TOAST_FADEIN, {GroupTransparency = 0})
-		ActiveToasts[newGuid]	= {
+		ToastData[newGuid]	= {
 			GUIElement			= newToast,
 			Tween				= Tween_FadeIn
 		}
+		ActiveToasts			+= 1	-- Add this toast to the counter.
+		
+		-- If there are too many toasts visible, find the oldest one and close it.
+		if ActiveToasts > 4 then
+			local TargetInfo	= {
+				GUID			= nil,
+				LowestID		= HighestToastNumber + 1
+			}
+			for guid : string,toast in ToastData do
+				if toast.GUIElement.LayoutOrder < TargetInfo.LowestID then
+					TargetInfo.LowestID = toast.GUIElement.LayoutOrder
+					TargetInfo.Toast = guid
+				end
+			end
+			if TargetInfo.GUID then
+				CloseToast(TargetInfo.GUID)
+			end
+		end
 		
 		-- Fade in this toast, but don't let the player click/tap it to hide it early UNTIL this finishes, waiting to connect a function.
 		Tween_FadeIn:Play()
