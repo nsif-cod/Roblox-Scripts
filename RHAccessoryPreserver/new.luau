@@ -1068,12 +1068,14 @@ local function FixRHCharacter(_root : Model, _param : FixRHCharParams)
 						if piece:IsA("BasePart") and piece.Transparency > 0.999 then piece.Transparency = 0 end
 					end
 				end
-			elseif desc.Parent.Name == "Head" and desc:IsA("Decal") and _param.Face then	-- If allowed, change their face texture(s)!
+			elseif desc:IsA("Decal") and desc.Parent and	-- If allowed, change their face texture(s)!
+				desc.Parent.Name == "Head" and _param.Face
+			then
 				if desc.Name == "face" then desc.Texture = "rbxassetid://144080495"	-- Forcibly use the default smile texture.
 				elseif table.find(RH_FACE_DECALS, desc.Name) then desc:Destroy()	-- Remove any extra RH face layers.
 				end
 			elseif desc:IsA("BillboardGui") then
-				if desc.Parent.Name == "Head" and desc.Name == "NameTag" and _param.RPName then
+				if desc.Name == "NameTag" and desc.Parent and desc.Parent.Name == "Head" and _param.RPName then
 					if _param.RPName == "hide" then
 						desc.Enabled = false
 						
@@ -1864,6 +1866,15 @@ local SaveTypeDefs : {SaveType}			= {
 		[1]	Category/folder name (Accessories / Hair / Skirts / Wings, heels are saved by the HeelsRH SaveType)
 		[2]	Item model name
 		[3]	Model debug ID (used as fallback if a matching name isn't found)
+		
+		TODO: Currently, when an item is saved by itself, its main weld(s), which attach it to the player's body parts, are
+		removed by Roblox after the model is cloned. It's easy to recreate these welds, since they usually don't have a
+		CFrame offset, but they should be maintained if possible. Consider writing code that looks for descendants named
+		after the standard R15 body parts (and if it's a Model, look for a BasePart within it ALSO named after a body part),
+		stores info about the Weld instance and its Part1, then nil's the Part1 before cloning the item.
+		
+		This should keep any "main welds", and it's easy to iterate through that array of dictionary entries to re-attach
+		any Welds that were briefly disconnected just before it was cloned.
 	]]--
 	["ItemRH"]							= {
 		ContentType						= "3D",
