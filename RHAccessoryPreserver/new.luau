@@ -149,7 +149,8 @@ local RH_FACE_DECALS	= {	-- Royale High's "custom face" layers
 local RH_UNWANTED_ICONS	= {	-- Names of unwanted overhead status indicators like the Dress Up/try on/shopping icons.
 	"CharacterCreationIcon",	-- Dressing up
 	"ShopIcon",					-- Shopping
-	"PreviewIcon"				-- Trying on store clothing
+	"PreviewIcon",				-- Trying on store clothing
+	"TypingGui"					-- Chatting/typing a message
 }
 
 local RH_ES_FOLDER_NAMES= {
