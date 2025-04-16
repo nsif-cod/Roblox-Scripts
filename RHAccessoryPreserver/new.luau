@@ -1,7 +1,7 @@
 --[[
 	ROYALE HIGH ACCESSORY PRESERVER V2		|
 	PROUDLY MADE BY XANE MYERS IN APRIL 2025|
-	LAST UPDATED APRIL 13TH, 2025			|
+	LAST UPDATED APRIL 16TH, 2025			|
 	----------------------------------------/
 	An amazing psuedo-sequel to an already powerful script, used for saving various (mostly 3D) assets from Roblox experiences,
 	including but no longer limited to Royale High! Run this script (preferably using Infinite Fun's 'rhsave' command) then tap
@@ -1126,6 +1126,22 @@ local PLACE_ID								= game.PlaceId
 local TI_TOAST_FADEIN						= TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
 local TI_TOAST_FADEOUT						= TweenInfo.new(0.625, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
 
+local function FindToolChild(_locat : Instance?, _name : string, _debugId : string)
+	-- Try to find an exact named match in the requested location first, comparing its name then debug ID to the info given.
+	local temp_tool:Tool?					= _locat:FindFirstChild(_name) or _locat:FindFirstChildOfClass("Tool")
+	if temp_tool.Name == _name or temp_tool:GetDebugId() == _debugId then 
+		return temp_tool:Clone()
+	else	-- If a match wasn't found, scan through the Instance's children and try to find a match, in case the Tool was renamed.
+		for _,inst : Tool? in _locat:GetChildren() do
+			if inst:IsA("Tool") and (inst.Name == _name or inst:GetDebugId() == _debugId) then
+				return inst:Clone()	-- If it was found, clone it then give it to the caller.
+			end
+		end
+		DisplayToast("The player isn't carrying that tool anymore.", "⚠️", 3.125)	-- If nothing could be found, error and bail out!
+		error("The requested Tool wasn't in that player's hands when saving...x")
+	end
+end
+
 local function AssignDescriptiveRHItemName(_isFurni : boolean, Target : Model, _heelsModel : Model?)
 	if not Target then return false end	-- This function needs a Model, as it will modify it, adding attributes and renaming it.
 	local ModelNameSrc : Model				= Target	-- For most clothes, the name StringValue is within the target Model.
@@ -1611,7 +1627,7 @@ local DetectTypeDefs : {ScanType}			= {
 					AddListPart(
 						temp_char:FindFirstChildOfClass("Tool").Name,
 						"🖐️",
-						"GenModel",
+						"Tools",
 						{temp_char:FindFirstChildOfClass("Tool").Name, "Character", temp_char:FindFirstChildOfClass("Tool"):GetDebugId()},
 						PlayerSelectParams.SelectedPlayer
 					)
@@ -1796,6 +1812,51 @@ local SaveTypeDefs : {SaveType}			= {
 					"⚠️",
 					6.5
 				)
+			end
+			
+			return result
+		end
+	},
+	--[[
+		Tools (standard Roblox tool instance grabber)
+		A self-explanatory SaveType, which tries to find and clone a tool with a specific name in a specific container
+		(the player's character, backpack, or the StarterPack).
+		
+		Expected context values:
+		[1]	Tool's name
+		[2]	Location ("Character", "Backpack" or "StarterPack")
+		[3]	Tool debug ID (as a fallback)
+	]]--
+	["Tools"]							= {
+		ContentType						= "3D",
+		Get								= function(_saveParams : GetFuncParams, _contextIDs : {ValidIDValues})
+			if not _contextIDs then
+				error("No context values were provided to the Tools SaveType. Please report this as an issue on GitHub.")
+			elseif type(_contextIDs) ~= "table" then
+				error("The context values variable isn't an array.")
+			elseif #_contextIDs ~= 3 then
+				error("The Tools SaveType requires exactly 3 context values.")
+			elseif _contextIDs[2] ~= "Character" and _contextIDs[2] ~= "Backpack" and _contextIDs[2] ~= "StarterPack" then
+				error("Unknown tool location given. (Only 'Character', 'Backpack', and 'StarterPack' are accepted.)")
+			end
+			local result:SaveReturnTypes= nil
+			
+			if _contextIDs[2] == "Character" then
+				local temp_char:Model?	= PlayerSelectParams.SelectedPlayer.Character
+				if not temp_char then
+					DisplayToast(PlayerSelectParams.SelectedPlayer.DisplayName.."'s character couldn't be found.","❔",3.175)
+					error("Couldn't find that player's character.x")
+				end
+				result					= FindToolChild(temp_char, _contextIDs[1], _contextIDs[3])
+			elseif _contextIDs[2] == "Backpack" then
+				local temp_backpack		= PlayerSelectParams.SelectedPlayer:FindFirstChildOfClass("Backpack")
+				if not temp_backpack then
+					DisplayToast(PlayerSelectParams.SelectedPlayer.DisplayName.."'s backpack couldn't be found.","❔",3.175)
+					error("Couldn't find that player's backpack.x")
+				end
+				result					= FindToolChild(temp_backpack, _contextIDs[1], _contextIDs[3])
+			elseif _contextIDs[2] == "StarterPack" then
+				result					= FindToolChild(StarterPack, _contextIDs[1], _contextIDs[3])
 			end
 			
 			return result
